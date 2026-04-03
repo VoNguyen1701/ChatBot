@@ -1,0 +1,3 @@
+pdfplumber
+tqdm
+pymongo
