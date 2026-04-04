@@ -18,8 +18,10 @@ from storage.mongo import get_mongo_client
 # 1. CLEAN TEXT
 # =========================
 def clean_text(text):
-    text = re.sub(r"\n+", "\n", text)
-    text = re.sub(r"\s+", " ", text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r" *\n *", "\n", text)
+    text = re.sub(r"\n{2,}", "\n\n", text)
     text = re.sub(r"Trang\s*\d+", "", text, flags=re.IGNORECASE)
     return text.strip()
 
@@ -76,7 +78,7 @@ def extract_metadata(text):
         # Thường là dòng 0 hoặc 1 (Ví dụ: QUỐC HỘI hoặc CHÍNH PHỦ)
         metadata["issuer"] = lines[0].split("---")[0].strip().title()
 
-    # 4. Loại văn bản & Tiêu đề (Sửa lỗi null)
+    # 4. Loại văn bản & Tiêu đề
     type_map = {
         "LUẬT": "Luật",
         "NGHỊ ĐỊNH": "Nghị định",
@@ -88,7 +90,7 @@ def extract_metadata(text):
     for i, line in enumerate(lines):
         line_up = line.upper()
         for key, value in type_map.items():
-            if key in line_up and len(line_up) < 20: # Tìm dòng chứa từ khóa loại văn bản
+            if re.search(rf"^{key}\b", line_up):  # Tìm dòng bắt đầu bằng từ khóa loại văn bản
                 metadata["document_type"] = value
                 
                 # Tiêu đề là các dòng tiếp theo cho đến khi gặp "CĂN CỨ"
@@ -105,7 +107,7 @@ def extract_metadata(text):
     return metadata
 
 # =========================
-# 4. SMART CHUNKING (CODE 1 + IMPROVE)
+# 4. SMART CHUNKING
 # =========================
 def split_into_smart_chunks(text, metadata, max_child_size=800):
     text = re.sub(r"\n+", "\n", text).strip()
@@ -132,14 +134,25 @@ def split_into_smart_chunks(text, metadata, max_child_size=800):
     # 3. Xử lý từng Điều
     # =========================
     for block in dieu_blocks[1:]:
-        lines = block.strip().split("\n")
+        block = block.strip()
 
+        # 🔥 bỏ block rác
+        if not block or len(block) < 10:
+            continue
+
+        lines = block.split("\n")
         title = lines[0].strip()
-        body = " ".join(lines[1:]).strip()
-        # extract số điều
-        dieu_match = re.search(r"Điều\s+(\d+)", title)
-        dieu_number = int(dieu_match.group(1)) if dieu_match else None
 
+        # 🔥 bỏ title lỗi
+        if not title:
+            continue
+
+        dieu_match = re.search(r"Điều\s+(\d+)", title)
+        if not dieu_match:
+            continue
+
+        dieu_number = int(dieu_match.group(1))
+        body = " ".join(lines[1:]).strip()
         # =========================
         # Nếu Điều dài → tách khoản
         # =========================
@@ -232,6 +245,8 @@ def process_and_store(base_folder, db):
                     chunk_docs.append({
                         "_id": str(uuid.uuid4()),
                         "parent_doc_id": doc_id,
+                        "dieu": chunk.get("dieu"),
+                        "khoan": chunk.get("khoan"),
                         "section_title": chunk["section_title"],
                         "content": chunk["content"],
                         "content_length": len(chunk["content"])
