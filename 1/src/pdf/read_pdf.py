@@ -158,7 +158,7 @@ def split_into_smart_chunks(text, metadata, max_child_size=800):
         # =========================
         if len(body) > max_child_size:
 
-            khoan_parts = re.split(r"(?=\d+\.\s)", body)
+            khoan_parts = re.split(r"(?=(?:^|\n|\s)\d+\.\s)", body)  #r"(?=\n\d+\.\s)"
 
             for kp in khoan_parts:
                 kp = kp.strip()
