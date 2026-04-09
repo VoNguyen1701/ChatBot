@@ -11,7 +11,7 @@ SRC_DIR = os.path.join(BASE_DIR, "src")
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
-from storage.mongo import get_mongo_client
+from storage.mongo import get_db
 
 
 # =========================
@@ -269,7 +269,6 @@ def process_and_store(base_folder, db):
 if __name__ == "__main__":
     DATA_RAW_PATH = os.path.join(BASE_DIR, "data", "raw")
 
-    client = get_mongo_client()
-    db = client["legal_rag_db"]
+    db = get_db()
 
     process_and_store(DATA_RAW_PATH, db)
