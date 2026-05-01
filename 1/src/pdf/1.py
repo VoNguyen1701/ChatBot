@@ -169,13 +169,14 @@ def split_into_smart_chunks(text, metadata, max_child_size=800):
             continue
 
         dieu_number = int(dieu_match.group(1))
-        body = " ".join(lines[1:]).strip()
+        body = "\n".join(lines[1:]).strip()
         # =========================
         # Nếu Điều dài → tách khoản
         # =========================
         if len(body) > max_child_size:
 
-            khoan_parts = re.split(r"(?=(?:^|\n|\s)\d+\.\s)", body)  #r"(?=\n\d+\.\s)"
+            #khoan_parts = re.split(r"(?=(?:^|\n|\s)\d+\.\s)", body)
+            khoan_parts = re.split(r"(?=(?:^|\n)\s*\d{1,2}\.\s)", body)
 
             for kp in khoan_parts:
                 kp = kp.strip()
