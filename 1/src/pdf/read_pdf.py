@@ -1,5 +1,5 @@
 # src/pdf/read_pdf.py
-import os, sys, re, uuid
+import os, sys, re, uuid, hashlib
 from tqdm import tqdm
 import pdfplumber
 
@@ -24,8 +24,13 @@ def clean_text(text):
     text = re.sub(r"\n{2,}", "\n\n", text)
     text = re.sub(r"Trang\s*\d+", "", text, flags=re.IGNORECASE)
     return text.strip()
-
-
+def build_item_path(dieu, khoan):
+    parts = []
+    if dieu:
+        parts.append(f"Điều {dieu}")
+    if khoan:
+        parts.append(f"Khoản {khoan}")
+    return " > ".join(parts)
 # =========================
 # 2. READ PDF
 # =========================
@@ -105,7 +110,19 @@ def extract_metadata(text):
         if metadata["document_type"]: break
 
     return metadata
+def extract_references(text):
+    patterns = [
+        r"(Nghị định\s+số\s*\d+\/\d+\/[A-Z\-]+)",
+        r"(Luật\s+[^\n,\.]+?\d{4})",
+        r"(Thông tư\s+số\s*\d+\/\d+\/[A-Z\-]+)"
+    ]
 
+    refs = []
+    for p in patterns:
+        matches = re.findall(p, text, re.IGNORECASE)
+        refs.extend(matches)
+
+    return list(set(refs))
 # =========================
 # 4. SMART CHUNKING
 # =========================
@@ -152,13 +169,14 @@ def split_into_smart_chunks(text, metadata, max_child_size=800):
             continue
 
         dieu_number = int(dieu_match.group(1))
-        body = " ".join(lines[1:]).strip()
+        body = "\n".join(lines[1:]).strip()
         # =========================
         # Nếu Điều dài → tách khoản
         # =========================
         if len(body) > max_child_size:
 
-            khoan_parts = re.split(r"(?=(?:^|\n|\s)\d+\.\s)", body)  #r"(?=\n\d+\.\s)"
+            #khoan_parts = re.split(r"(?=(?:^|\n|\s)\d+\.\s)", body)
+            khoan_parts = re.split(r"(?=(?:^|\n)\s*\d{1,2}\.\s)", body)
 
             for kp in khoan_parts:
                 kp = kp.strip()
@@ -196,6 +214,9 @@ def split_into_smart_chunks(text, metadata, max_child_size=800):
 def process_and_store(base_folder, db):
     doc_col = db["documents"]
     chunk_col = db["chunks"]
+    ref_col = db["references"]
+    doc_link_col = db["document_links"]
+    version_col = db["document_versions"]
 
     categories = [
         f for f in os.listdir(base_folder)
@@ -221,12 +242,36 @@ def process_and_store(base_folder, db):
                 # DOC ID
                 doc_id = meta["doc_id"] if meta["doc_id"] != "UNKNOWN" else str(uuid.uuid4())
 
-                # SAVE DOCUMENT (UPSERT)
+                # ===== TẠO HASH NỘI DUNG =====
+                content_hash = hashlib.md5(full_text.encode()).hexdigest()
+
+                # ===== CHECK DOCUMENT CŨ =====
+                existing_doc = doc_col.find_one({"_id": doc_id})
+
+                if existing_doc:
+                    old_hash = existing_doc.get("content_hash")
+
+                    # ❌ KHÔNG ĐỔI → SKIP
+                    if old_hash == content_hash:
+                        print(f"[SKIP NO CHANGE] {doc_id}")
+                        continue
+
+                    # ✅ CÓ ĐỔI → tăng version
+                    version = existing_doc.get("current_version", 1) + 1
+                else:
+                    # ✅ DOCUMENT MỚI
+                    version = 1
+
+                version_id = f"{doc_id}_v{version}"
+
+                # ===== UPDATE DOCUMENT TRƯỚC =====
                 doc_col.update_one(
                     {"_id": doc_id},
                     {"$set": {
                         "_id": doc_id,
                         "metadata": meta,
+                        "current_version": version,
+                        "content_hash": content_hash,
                         "category": cat,
                         "file_name": file_name,
                         "raw_length": len(full_text)
@@ -234,27 +279,118 @@ def process_and_store(base_folder, db):
                     upsert=True
                 )
 
-                # DELETE OLD CHUNKS
-                chunk_col.delete_many({"parent_doc_id": doc_id})
+                # ===== ĐÓNG VERSION CŨ =====
+                version_col.update_many(
+                    {
+                        "doc_id": doc_id,
+                        "is_current": True
+                    },
+                    {
+                        "$set": {
+                            "is_current": False,
+                            "valid_to": meta.get("issued_date")
+                        }
+                    }
+                )
+
+                # ===== TẠO VERSION MỚI =====
+                version_col.insert_one({
+                    "_id": version_id,
+                    "doc_id": doc_id,
+                    "version": version,
+                    "effective_date": meta.get("issued_date"),
+                    "valid_from": meta.get("issued_date") or "1900-01-01",
+                    "valid_to": None,
+                    "is_current": True
+                })
 
                 # CHUNKING
                 chunks = split_into_smart_chunks(full_text, meta)
 
                 chunk_docs = []
-                for chunk in chunks:
-                    chunk_docs.append({
-                        "_id": str(uuid.uuid4()),
-                        "parent_doc_id": doc_id,
-                        "dieu": chunk.get("dieu"),
-                        "khoan": chunk.get("khoan"),
-                        "section_title": chunk["section_title"],
-                        "content": chunk["content"],
-                        "content_length": len(chunk["content"])
-                    })
+                ref_docs = []
 
+                for chunk in chunks:
+                    chunk_id = str(uuid.uuid4())
+
+                    content = chunk["content"]
+
+                    # ===== 1. SAVE CHUNK =====
+                    chunk_doc = {
+                        "_id": chunk_id,
+                        "doc_id": doc_id,
+                        "version_id": version_id,
+                        "hierarchy": {
+                            "dieu": chunk.get("dieu"),
+                            "khoan": chunk.get("khoan"),
+                            #"diem": chunk.get("diem")   # (tạm thời có thể None)
+                        },
+                        "item_path": build_item_path(
+                            chunk.get("dieu"),
+                            chunk.get("khoan"),
+                            #chunk.get("diem")
+                        ),
+
+                        "section_title": chunk["section_title"],
+                        "content": content,
+                        "content_length": len(content),
+                        "valid_from": meta.get("issued_date") or "1900-01-01",
+                        "valid_to": None,
+                    }
+
+                    chunk_docs.append(chunk_doc)
+
+                    # ===== 2. EXTRACT REFERENCES =====
+                    refs = extract_references(content)
+
+                    for ref in refs:
+                        ref_id = str(uuid.uuid4())
+
+                        # lưu reference
+                        ref_docs.append({
+                            "_id": ref_id,
+                            "source_chunk_id": chunk_id,
+                            "source_doc_id": doc_id,
+                            "reference_text": ref,
+                            "type": "legal_reference"
+                        })
+
+                        
+                        # detect sửa đổi
+                        if re.search(r"(sửa đổi|bổ sung|thay thế)", content, re.IGNORECASE):
+                            doc_link_col.update_one(
+                                {
+                                    "source_doc": doc_id,
+                                    "target_doc": ref
+                                },
+                                {
+                                    "$set": {
+                                        "relation": "amends"
+                                    }
+                                },
+                                upsert=True
+                            )
+                        # ===== 3. BUILD DOCUMENT LINK =====
+                        doc_link_col.update_one(
+                            {
+                                "source_doc": doc_id,
+                                "target_doc": ref
+                            },
+                            {
+                                "$set": {
+                                    "relation": "refers_to"
+                                }
+                            },
+                            upsert=True
+                        )
+
+                # ===== INSERT DB =====
                 if chunk_docs:
                     chunk_col.insert_many(chunk_docs)
                     total_chunks += len(chunk_docs)
+
+                if ref_docs:
+                    ref_col.insert_many(ref_docs)
 
             except Exception as e:
                 print(f"[ERROR] {file_name}: {e}")
