@@ -2,7 +2,8 @@
 import os, sys, re, uuid, hashlib
 from tqdm import tqdm
 import pdfplumber
-
+from pdf.legal_parser import DocumentTreeBuilder, ChunkBuilder
+from pdf.legal_parser import SimpleReferenceExtractor
 # =========================
 # SETUP PATH
 # =========================
@@ -49,7 +50,7 @@ def read_pdf_full(file_path):
 
 
 # =========================
-# 3. METADAT
+# 3. EXTRACT METADATA (BASIC)
 # =========================
 def extract_metadata(text):
     # Lấy 30 dòng đầu, làm sạch khoảng trắng
@@ -66,24 +67,33 @@ def extract_metadata(text):
         "title": None
     }
 
-    # 1. Số hiệu & ID
+    # 1️⃣ EXTRACT: Số hiệu & ID
+    # Regex: Tìm pattern "Số: XXX/2026" hoặc "Số XXX/2026"
     num_match = re.search(r"Số[:\s]*([\w\/\-]+)", header_full, re.IGNORECASE)
     if num_match:
         num = num_match.group(1)
         metadata["document_number"] = num
         metadata["doc_id"] = num.replace("/", "_")
 
-    # 2. Ngày ban hành
-    date_match = re.search(r"ngày\s*(\d{1,2})\s*(?:/|tháng\s*)(\d{1,2})\s*(?:/|năm\s*)(\d{4})", header_full, re.IGNORECASE)
+    # 2️⃣ EXTRACT: Ngày ban hành
+    # Regex: Tìm pattern "ngày 25 / tháng 12 / năm 2025"
+    # Hoặc: "ngày 25/12/2025"
+    date_match = re.search(
+        r"ngày\s*(\d{1,2})\s*(?:/|tháng\s*)(\d{1,2})\s*(?:/|năm\s*)(\d{4})", 
+        header_full, 
+        re.IGNORECASE
+    )
     if date_match:
-        metadata["issued_date"] = f"{date_match.group(1)}/{date_match.group(2)}/{date_match.group(3)}"
+        day, month, year = date_match.groups()
+        metadata["issued_date"] = f"{day}/{month}/{year}"
 
-    # 3. Issuer (Cơ quan ban hành) - Lấy dòng ngắn đầu tiên bên trái
+    # 3️⃣ EXTRACT: Issuer (Cơ quan ban hành)
+    # Lấy dòng đầu tiên (thường là QUỐC HỘI, CHÍNH PHỦ, BỘ...)
     if lines:
-        # Thường là dòng 0 hoặc 1 (Ví dụ: QUỐC HỘI hoặc CHÍNH PHỦ)
-        metadata["issuer"] = lines[0].split("---")[0].strip().title()
+        issuer_raw = lines[0].split("---")[0].strip()
+        metadata["issuer"] = issuer_raw.title() if issuer_raw else "UNKNOWN"
 
-    # 4. Loại văn bản & Tiêu đề
+    # 4️⃣ EXTRACT: Loại văn bản & Tiêu đề
     type_map = {
         "LUẬT": "Luật",
         "NGHỊ ĐỊNH": "Nghị định",
@@ -95,119 +105,24 @@ def extract_metadata(text):
     for i, line in enumerate(lines):
         line_up = line.upper()
         for key, value in type_map.items():
-            if re.search(rf"^{key}\b", line_up):  # Tìm dòng bắt đầu bằng từ khóa loại văn bản
+            # Match: Line bắt đầu bằng loại văn bản
+            if re.search(rf"^{key}\b", line_up):
                 metadata["document_type"] = value
                 
-                # Tiêu đề là các dòng tiếp theo cho đến khi gặp "CĂN CỨ"
+                # Tiêu đề = 3-4 dòng sau đó (cho đến khi gặp "CĂN CỨ")
                 title_parts = []
-                for j in range(i + 1, i + 5):
-                    if j < len(lines) and "CĂN CỨ" not in lines[j].upper():
+                for j in range(i + 1, min(i + 5, len(lines))):
+                    if "CĂN CỨ" not in lines[j].upper():
                         title_parts.append(lines[j])
                     else:
                         break
                 metadata["title"] = " ".join(title_parts).strip()
                 break
-        if metadata["document_type"]: break
+        
+        if metadata["document_type"]:
+            break
 
     return metadata
-def extract_references(text):
-    patterns = [
-        r"(Nghị định\s+số\s*\d+\/\d+\/[A-Z\-]+)",
-        r"(Luật\s+[^\n,\.]+?\d{4})",
-        r"(Thông tư\s+số\s*\d+\/\d+\/[A-Z\-]+)"
-    ]
-
-    refs = []
-    for p in patterns:
-        matches = re.findall(p, text, re.IGNORECASE)
-        refs.extend(matches)
-
-    return list(set(refs))
-# =========================
-# 4. SMART CHUNKING
-# =========================
-def split_into_smart_chunks(text, metadata, max_child_size=800):
-    text = re.sub(r"\n+", "\n", text).strip()
-
-    doc_ref = f"[{metadata['document_type']} {metadata['document_number']}]"
-
-    # =========================
-    # 1. Split theo Điều chuẩn
-    # =========================
-    dieu_blocks = re.split(r"(?=\n?Điều\s+\d+\.)", text)
-    chunks = []
-
-    # =========================
-    # 2. Xử lý mở đầu
-    # =========================
-    intro = dieu_blocks[0].strip()
-    if intro:
-        chunks.append({
-            "section_title": "Mở đầu",
-            "content": f"{doc_ref} {intro[:1200]}"
-        })
-
-    # =========================
-    # 3. Xử lý từng Điều
-    # =========================
-    for block in dieu_blocks[1:]:
-        block = block.strip()
-
-        # 🔥 bỏ block rác
-        if not block or len(block) < 10:
-            continue
-
-        lines = block.split("\n")
-        title = lines[0].strip()
-
-        # 🔥 bỏ title lỗi
-        if not title:
-            continue
-
-        dieu_match = re.search(r"Điều\s+(\d+)", title)
-        if not dieu_match:
-            continue
-
-        dieu_number = int(dieu_match.group(1))
-        body = "\n".join(lines[1:]).strip()
-        # =========================
-        # Nếu Điều dài → tách khoản
-        # =========================
-        if len(body) > max_child_size:
-
-            #khoan_parts = re.split(r"(?=(?:^|\n|\s)\d+\.\s)", body)
-            khoan_parts = re.split(r"(?=(?:^|\n)\s*\d{1,2}\.\s)", body)
-
-            for kp in khoan_parts:
-                kp = kp.strip()
-                if not kp:
-                    continue
-
-                # extract số khoản
-                khoan_match = re.search(r"^(\d+)\.", kp)
-                khoan_number = int(khoan_match.group(1)) if khoan_match else None
-
-                # clean content cho embedding (bỏ "Điều X.")
-                clean_kp = re.sub(r"Điều\s+\d+\.\s*", "", kp)
-
-                chunks.append({
-                    "dieu": dieu_number,
-                    "khoan": khoan_number,
-                    "section_title": f"{title} - Khoản {khoan_number}",
-                    "content": f"{doc_ref} - {title} - {clean_kp}"
-                })
-
-        else:
-            chunks.append({
-                "dieu": dieu_number,
-                "khoan": None,
-                "section_title": title,
-                "content": f"{doc_ref} - {title}: {body}"
-            })
-
-    return chunks
-
-
 # =========================
 # 5. STORE
 # =========================
@@ -305,7 +220,11 @@ def process_and_store(base_folder, db):
                 })
 
                 # CHUNKING
-                chunks = split_into_smart_chunks(full_text, meta)
+                tree_builder = DocumentTreeBuilder(full_text)
+                doc_tree = tree_builder.build_tree()
+
+                chunk_builder = ChunkBuilder(doc_tree)
+                chunks = chunk_builder.build_chunks()
 
                 chunk_docs = []
                 ref_docs = []
@@ -341,7 +260,8 @@ def process_and_store(base_folder, db):
                     chunk_docs.append(chunk_doc)
 
                     # ===== 2. EXTRACT REFERENCES =====
-                    refs = extract_references(content)
+                    ref_extractor = SimpleReferenceExtractor()
+                    refs = ref_extractor.extract_references(content)
 
                     for ref in refs:
                         ref_id = str(uuid.uuid4())
@@ -351,7 +271,11 @@ def process_and_store(base_folder, db):
                             "_id": ref_id,
                             "source_chunk_id": chunk_id,
                             "source_doc_id": doc_id,
-                            "reference_text": ref,
+                            "reference": {
+                                "doc_type": ref["doc_type"],
+                                "doc_number": ref["doc_number"]
+                            },
+                            "context": ref["context"],
                             "type": "legal_reference"
                         })
 
