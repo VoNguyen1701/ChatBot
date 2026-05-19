@@ -183,7 +183,14 @@ class DocumentTreeBuilder:
         
         # ===== FIND ALL CLAUSES =====
         clause_pattern = r'(\d+)[\.\)]\s*([^\n]*(?:\n(?!^\d+[\.\)]).*)*)'
-        clause_matches = re.finditer(clause_pattern, body, re.MULTILINE)
+        clause_matches = list(re.finditer(clause_pattern, body, re.MULTILINE))
+        if not clause_matches:
+            article["clauses"].append({
+                "number": 1,
+                "content": body,
+                "points": []
+            })
+            return article
         
         for clause_match in clause_matches:
             clause_num = int(clause_match.group(1))
@@ -191,8 +198,11 @@ class DocumentTreeBuilder:
             
             # ===== EXTRACT POINTS FROM CLAUSE =====
             points = []
-            point_pattern = r'([a-z])[\.\)]\s*([^\n]*(?:\n(?![a-z][\.\)]).*)*)'
-            point_matches = list(re.finditer(point_pattern, clause_content_raw, re.IGNORECASE | re.MULTILINE))
+            point_pattern = (
+                r'^\s*([a-zđ])[\.\)]\s*(.*?)'
+                r'(?=^\s*[a-zđ][\.\)]|\Z)'
+            )
+            point_matches = list(re.finditer( point_pattern, clause_content_raw, re.IGNORECASE | re.MULTILINE | re.DOTALL))
             
             # Remove points from clause content
             clause_content = clause_content_raw
