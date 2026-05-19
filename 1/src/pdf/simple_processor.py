@@ -97,6 +97,7 @@ class UnifiedDocumentProcessor:
         
         Args:
             file_path (str): Path to PDF file
+            category (str): Category/folder name (e.g., "law", "school")
         
         Returns:
             Dict: Processing result
@@ -202,17 +203,29 @@ class UnifiedDocumentProcessor:
                 "current_version": version,
                 "content_hash": content_hash,
                 "tree_stats": {
-                    "total_articles": len(tree["articles"]),
-
-                    "total_clauses": sum(
-                        len(a["clauses"])
-                        for a in tree["articles"]
+                    "total_chapters": len(tree.get("chapters", [])),
+                    "total_articles": (
+                        sum(len(ch["articles"]) for ch in tree.get("chapters", []))
+                        if tree.get("chapters") else len(tree.get("articles", []))
                     ),
-
-                    "total_points": sum(
-                        len(c["points"])
-                        for a in tree["articles"]
-                        for c in a["clauses"]
+                    "total_clauses": (
+                        sum(
+                            len(a["clauses"])
+                            for ch in tree.get("chapters", [])
+                            for a in ch["articles"]
+                        )
+                        if tree.get("chapters") else
+                        sum(len(a["clauses"]) for a in tree.get("articles", []))
+                    ),
+                    "total_points": (
+                        sum(
+                            len(c["points"])
+                            for ch in tree.get("chapters", [])
+                            for a in ch["articles"]
+                            for c in a["clauses"]
+                        )
+                        if tree.get("chapters") else
+                        sum(len(c["points"]) for a in tree.get("articles", []) for c in a["clauses"])
                     )
                 },
                 "reference_count": len(simple_refs),
@@ -249,14 +262,6 @@ class UnifiedDocumentProcessor:
         # ===== 5. Insert Chunks =====
         chunk_docs = []
         for chunk in chunks:
-            embedding_text = f"""
-            {metadata.get('document_type', '')}
-            {metadata.get('document_number', '')}
-
-            {chunk['section_title']}
-
-            {chunk['content']}
-            """.strip()
             chunk_docs.append({
                 "_id": chunk["_id"],
                 "doc_id": doc_id,
@@ -264,13 +269,13 @@ class UnifiedDocumentProcessor:
                 "document_type": metadata.get("document_type"),
                 "effective_date": metadata.get("effective_date"),
                 "hierarchy": {
-                    "dieu": chunk["dieu"],
-                    "khoan": chunk["khoan"],
-                    "diem": chunk["diem"]
+                    "chapter": chunk["location"].get("chapter"),
+                    "dieu": chunk["location"].get("article"),
+                    "khoan": chunk["location"].get("clause"),
+                    "diem": chunk["location"].get("point")
                 },
                 "section_title": chunk["section_title"],
                 "content": chunk["content"],
-                "embedding_text": embedding_text,
                 "level": chunk["level"],
                 "content_length": len(chunk["content"]),
                 "created_at": datetime.utcnow()

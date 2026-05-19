@@ -27,22 +27,6 @@ from typing import List, Dict, Optional
 # CLASS 1: DOCUMENT TREE BUILDER
 # =============================================================================
 class DocumentTreeBuilder:
-    """
-    Xây dựng cây cấu trúc phân cấp của tài liệu pháp lý Vietnamese.
-    
-    HIERARCHY:
-    ├─ preamble          (Mở đầu, CĂN CỨ, QUYẾT ĐỊNH, etc)
-    └─ articles[]
-       ├─ number        (1, 2, 3, ...)
-       ├─ title         ("Điều 1")
-       ├─ preamble      (Mô tả Điều)
-       └─ clauses[]     (Khoản)
-          ├─ number     (1, 2, 3, ...)
-          ├─ content    (Nội dung Khoản)
-          └─ points[]   (Điểm)
-             ├─ label   ("a", "b", "c", ...)
-             └─ content (Nội dung Điểm)
-    """
     
     def __init__(self, text: str):
         """
@@ -55,6 +39,7 @@ class DocumentTreeBuilder:
         self.lines = text.split('\n')
         self.tree = {
             "preamble": "",
+            "chapters": [],
             "articles": []
         }
     
@@ -63,120 +48,201 @@ class DocumentTreeBuilder:
         # ===== NORMALIZE TEXT =====
         text = re.sub(r"\n+", "\n", self.text).strip()
 
-        # ===== SPLIT ARTICLES =====
+        # ===== CHECK FOR CHAPTERS =====
+        chapter_pattern = r'(?:^|\n)\s*Chương\s+[IVXivx\d]+\b'
+        has_chapters = bool(re.search(chapter_pattern, text))
+        
+        if has_chapters:
+            self._parse_with_chapters(text)
+        else:
+            self._parse_without_chapters(text)
+
+        return self.tree
+    
+    def _parse_with_chapters(self, text: str):
+        """Parse document with Chương (Chapter) structure"""
+        
+        # ===== SPLIT BY CHAPTERS =====
+        chapter_blocks = re.split(
+            r'(?=(?:^|\n)\s*Chương\s+[IVXivx\d]+\b)',
+            text
+        )
+        
+        # ===== PREAMBLE (before first chapter) =====
+        self.tree["preamble"] = chapter_blocks[0].strip()
+        
+        # ===== PROCESS CHAPTERS =====
+        for chapter_block in chapter_blocks[1:]:
+            chapter_block = chapter_block.strip()
+            if not chapter_block:
+                continue
+            
+            # Extract chapter header: "Chương 1: NHỮNG QUY ĐỊNH CHUNG"
+            chapter_match = re.search(
+                r'Chương\s+([IVXivx\d]+)\s*\n+([^\n]+)',
+                chapter_block,
+                re.IGNORECASE
+            )
+            
+            if not chapter_match:
+                continue
+            
+            chapter_num_str = chapter_match.group(1)
+            chapter_name = chapter_match.group(2).strip()
+            
+            # Convert Roman/Arabic to number
+            try:
+                chapter_num = self._convert_to_number(chapter_num_str)
+            except:
+                chapter_num = len(self.tree["chapters"]) + 1
+            
+            # Extract chapter body (after header)
+            chapter_body = re.sub(
+                r'^Chương\s+[IVXivx\d]+\s*\n+[^\n]+\n*',
+                '',
+                chapter_block,
+                flags=re.IGNORECASE
+            ).strip()
+            
+            chapter = {
+                "number": chapter_num,
+                "title": f"Chương {chapter_num_str}",
+                "name": chapter_name,
+                "articles": []
+            }
+            
+            # ===== PARSE ARTICLES WITHIN CHAPTER =====
+            article_blocks = re.split(
+                r'(?=(?:^|\n|\s)Điều\s+\d+\.)',
+                chapter_body
+            )
+            
+            for article_block in article_blocks:
+                article_block = article_block.strip()
+                if not article_block:
+                    continue
+                
+                article = self._parse_article(article_block)
+                if article:
+                    chapter["articles"].append(article)
+            
+            self.tree["chapters"].append(chapter)
+    
+    def _parse_without_chapters(self, text: str):
+        """Parse document without Chương structure"""
+        
+        # ===== SPLIT BY ARTICLES =====
         article_blocks = re.split(
             r'(?=(?:^|\n|\s)Điều\s+\d+\.)',
             text
         )
-
+        
         # ===== PREAMBLE =====
         self.tree["preamble"] = article_blocks[0].strip()
-
+        
         # ===== PROCESS ARTICLES =====
-        for block in article_blocks[1:]:
-
-            block = block.strip()
-
-            if not block:
+        for article_block in article_blocks[1:]:
+            article_block = article_block.strip()
+            if not article_block:
                 continue
-
-            # ===== ARTICLE HEADER =====
-            article_match = re.search(
-                r'Điều\s+(\d+)\.\s*(.*)',
-                block
-            )
-
-            if not article_match:
-                continue
-
-            article_num = int(article_match.group(1))
-
-            # ===== REMOVE ARTICLE HEADER =====
-            body = re.sub(
-                r'^Điều\s+\d+\.\s*',
-                '',
-                block
-            ).strip()
-
-            article = {
-                "number": article_num,
-                "title": f"Điều {article_num}",
-                "preamble": "",
-                "clauses": []
-            }
-
-            # ===== SPLIT CLAUSES DIRECTLY FROM BODY =====
-            clause_parts = re.split(
-                r'(?=(?:^|\s)\d{1,2}[\.\)])',
-                body
-            )
-
-            for part in clause_parts:
-
-                part = part.strip()
-
-                if not part:
-                    continue
-
-                clause_match = re.match(
-                    r'^(\d+)[\.\)]\s*(.*)',
-                    part,
-                    re.DOTALL
-                )
-
-                if clause_match:
-
-                    clause_num = int(clause_match.group(1))
-                    clause_content = clause_match.group(2).strip()
-
-                    clause = {
-                        "number": clause_num,
-                        "content": clause_content,
-                        "points": []
-                    }
-
-                    # ===== SPLIT POINTS =====
-                    point_parts = re.split(
-                        r'(?=(?:^|\s)[a-z][\.\)])',
-                        clause_content
-                    )
-
-                    cleaned_content = []
-
-                    for pp in point_parts:
-
-                        pp = pp.strip()
-
-                        if not pp:
-                            continue
-
-                        point_match = re.match(
-                            r'^([a-z])[\.\)]\s*(.*)',
-                            pp,
-                            re.IGNORECASE | re.DOTALL
-                        )
-
-                        if point_match:
-
-                            clause["points"].append({
-                                "label": point_match.group(1),
-                                "content": point_match.group(2).strip()
-                            })
-
-                        else:
-                            cleaned_content.append(pp)
-
-                    clause["content"] = " ".join(cleaned_content)
-
-                    article["clauses"].append(clause)
-
-                else:
-                    article["preamble"] += " " + part
             
-            # ===== SAVE ARTICLE =====
-            self.tree["articles"].append(article)
-
-        return self.tree
+            article = self._parse_article(article_block)
+            if article:
+                self.tree["articles"].append(article)
+    
+    def _parse_article(self, article_block: str) -> Optional[Dict]:
+        """Parse single article block into articles dict with clauses and points"""
+        
+        # ===== ARTICLE HEADER =====
+        article_match = re.search(
+            r'Điều\s+(\d+)\.\s*([^\n]*)',
+            article_block,
+            re.IGNORECASE
+        )
+        
+        if not article_match:
+            return None
+        
+        article_num = int(article_match.group(1))
+        article_title_suffix = article_match.group(2).strip()
+        
+        # ===== REMOVE ARTICLE HEADER =====
+        body = re.sub(
+            r'^Điều\s+\d+\.\s*',
+            '',
+            article_block,
+            flags=re.DOTALL
+        ).strip()
+        
+        article = {
+            "number": article_num,
+            "title": f"Điều {article_num}",
+            "preamble": article_title_suffix if article_title_suffix and not re.match(r'^\d+[\.\)]', article_title_suffix) else "",
+            "clauses": []
+        }
+        
+        # ===== FIND ALL CLAUSES =====
+        clause_pattern = r'(\d+)[\.\)]\s*([^\n]*(?:\n(?!^\d+[\.\)]).*)*)'
+        clause_matches = re.finditer(clause_pattern, body, re.MULTILINE)
+        
+        for clause_match in clause_matches:
+            clause_num = int(clause_match.group(1))
+            clause_content_raw = clause_match.group(2).strip()
+            
+            # ===== EXTRACT POINTS FROM CLAUSE =====
+            points = []
+            point_pattern = r'([a-z])[\.\)]\s*([^\n]*(?:\n(?![a-z][\.\)]).*)*)'
+            point_matches = list(re.finditer(point_pattern, clause_content_raw, re.IGNORECASE | re.MULTILINE))
+            
+            # Remove points from clause content
+            clause_content = clause_content_raw
+            if point_matches:
+                # Keep only content before first point
+                first_point_start = point_matches[0].start()
+                clause_content = clause_content_raw[:first_point_start].strip()
+                
+                # Extract all points
+                for point_match in point_matches:
+                    points.append({
+                        "label": point_match.group(1).lower(),
+                        "content": point_match.group(2).strip()
+                    })
+            
+            clause = {
+                "number": clause_num,
+                "content": clause_content if clause_content else clause_content_raw,
+                "points": points
+            }
+            
+            article["clauses"].append(clause)
+        
+        return article
+    
+    def _convert_to_number(self, s: str) -> int:
+        """Convert Roman or Arabic numerals to int"""
+        s = s.strip()
+        
+        # Try Arabic first
+        try:
+            return int(s)
+        except:
+            pass
+        
+        # Try Roman
+        roman_map = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}
+        s = s.upper()
+        result = 0
+        prev = 0
+        
+        for char in reversed(s):
+            val = roman_map.get(char, 0)
+            if val < prev:
+                result -= val
+            else:
+                result += val
+            prev = val
+        
+        return result if result > 0 else 1
 
 
 # =============================================================================
@@ -197,14 +263,17 @@ class ChunkBuilder:
         self.metadata = metadata
         self.doc_ref = doc_ref or f"[{metadata.get('document_type', 'DOC')} {metadata.get('document_number', 'UNKNOWN')}]"
         self.chunks = []
-        self.max_size = 800  # characters per chunk
     
     def build(self) -> List[Dict]:
         """
         Build chunks from tree structure
         
+        Handles both structures:
+        - With chapters: preamble → chapters[].articles[]
+        - Without chapters: preamble → articles[]
+        
         Returns:
-            List[Dict]: List of chunks (xem OUTPUT trên)
+            List[Dict]: List of chunks
         """
         
         # ===== 1. PREAMBLE CHUNK =====
@@ -216,71 +285,86 @@ class ChunkBuilder:
                 "khoan": None,
                 "diem": None,
                 "section_title": "Mở đầu",
-                "content": f"{self.doc_ref} - {preamble_text[:self.max_size]}",
-                "location": {"article": None, "clause": None, "point": None},
+                "content": f"{self.doc_ref} - {preamble_text}",
+                "location": {"chapter": None, "article": None, "clause": None, "point": None},
                 "level": "preamble"
             })
         
-        # ===== 2. ARTICLE + CLAUSE + POINT CHUNKS =====
-        for article in self.tree["articles"]:
-            article_num = article["number"]
-            article_title = article["title"]
-            
-            # Article preamble
-            if article["preamble"].strip():
-                self.chunks.append({
-                    "_id": str(uuid.uuid4()),
-                    "dieu": article_num,
-                    "khoan": None,
-                    "diem": None,
-                    "section_title": f"{article_title} - {article['preamble'][:60]}...",
-                    "content": f"{self.doc_ref} - {article_title}: {article['preamble'][:self.max_size]}",
-                    "location": {"article": article_num, "clause": None, "point": None},
-                    "level": "article"
-                })
-            
-            # Clauses
-            for clause in article["clauses"]:
-                clause_num = clause["number"]
-                clause_content = clause["content"]
+        # ===== 2. CHAPTERS (if exist) =====
+        if self.tree.get("chapters"):
+            for chapter in self.tree["chapters"]:
+                chapter_num = chapter["number"]
+                chapter_title = chapter["title"]
+                chapter_name = chapter.get("name", "")
                 
-                # If has points → create point-level chunks
-                if clause["points"]:
-                    for point in clause["points"]:
-                        point_label = point["label"]
-                        point_content = point["content"]
-                        
-                        section_title = f"{article_title} - Khoản {clause_num}{point_label}"
-                        
-                        # Combine clause + point content
-                        full_text = f"{clause_content}\n{point_content}"
-                        
-                        self.chunks.append({
-                            "_id": str(uuid.uuid4()),
-                            "dieu": article_num,
-                            "khoan": clause_num,
-                            "diem": point_label,
-                            "section_title": section_title,
-                            "content": f"{self.doc_ref} - {section_title}\n{full_text[:self.max_size]}",
-                            "location": {"article": article_num, "clause": clause_num, "point": point_label},
-                            "level": "point"
-                        })
-                else:
-                    # No points → clause-level chunk
-                    section_title = f"{article_title} - Khoản {clause_num}"
-                    
+                # Chapter name chunk
+                if chapter_name:
                     self.chunks.append({
                         "_id": str(uuid.uuid4()),
-                        "dieu": article_num,
-                        "khoan": clause_num,
+                        "dieu": None,
+                        "khoan": None,
                         "diem": None,
-                        "section_title": section_title,
-                        "content": f"{self.doc_ref} - {section_title}\n{clause_content[:self.max_size]}",
-                        "location": {"article": article_num, "clause": clause_num, "point": None},
-                        "level": "clause"
+                        "section_title": f"{chapter_title}: {chapter_name}",
+                        "content": f"{self.doc_ref} - {chapter_title}: {chapter_name}",
+                        "location": {"chapter": chapter_num, "article": None, "clause": None, "point": None},
+                        "level": "chapter"
                     })
+                
+                # Articles within chapter
+                for article in chapter.get("articles", []):
+                    self._add_article_chunks(article, chapter_num=chapter_num)
+        
+        # ===== 3. ARTICLES (if no chapters) =====
+        else:
+            for article in self.tree.get("articles", []):
+                self._add_article_chunks(article, chapter_num=None)
         
         return self.chunks
+    
+    def _add_article_chunks(self, article: Dict, chapter_num: Optional[int] = None):
+        """Add chunks for single article - COMBINE all points into one clause chunk"""
+        
+        article_num = article["number"]
+        article_title = article["title"]
+        
+        # Article preamble
+        if article.get("preamble", "").strip():
+            self.chunks.append({
+                "_id": str(uuid.uuid4()),
+                "dieu": article_num,
+                "khoan": None,
+                "diem": None,
+                "section_title": f"{article_title} - {article['preamble'][:60]}...",
+                "content": f"{self.doc_ref} - {article_title}: {article['preamble']}",
+                "location": {"chapter": chapter_num, "article": article_num, "clause": None, "point": None},
+                "level": "article"
+            })
+        
+        # Clauses - COMBINE all points into single clause chunk
+        for clause in article.get("clauses", []):
+            clause_num = clause["number"]
+            clause_content = clause.get("content", "")
+            points = clause.get("points", [])
+            
+            # Build combined content: clause + all points together
+            combined_parts = [clause_content]
+            if points:
+                for point in points:
+                    combined_parts.append(f"{point['label']}) {point['content']}")
+            
+            full_text = "\n".join(combined_parts)
+            section_title = f"{article_title} - Khoản {clause_num}"
+            
+            self.chunks.append({
+                "_id": str(uuid.uuid4()),
+                "dieu": article_num,
+                "khoan": clause_num,
+                "diem": None,
+                "section_title": section_title,
+                "content": f"{self.doc_ref} - {section_title}\n{full_text}",
+                "location": {"chapter": chapter_num, "article": article_num, "clause": clause_num, "point": None},
+                "level": "clause"
+            })
 
 
 # =============================================================================

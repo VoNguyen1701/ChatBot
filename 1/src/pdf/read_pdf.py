@@ -221,10 +221,10 @@ def process_and_store(base_folder, db):
 
                 # CHUNKING
                 tree_builder = DocumentTreeBuilder(full_text)
-                doc_tree = tree_builder.build_tree()
+                doc_tree = tree_builder.build()
 
-                chunk_builder = ChunkBuilder(doc_tree)
-                chunks = chunk_builder.build_chunks()
+                chunk_builder = ChunkBuilder(doc_tree, meta)
+                chunks = chunk_builder.build()
 
                 chunk_docs = []
                 ref_docs = []
@@ -240,19 +240,19 @@ def process_and_store(base_folder, db):
                         "doc_id": doc_id,
                         "version_id": version_id,
                         "hierarchy": {
-                            "dieu": chunk.get("dieu"),
-                            "khoan": chunk.get("khoan"),
-                            #"diem": chunk.get("diem")   # (tạm thời có thể None)
+                            "chapter": chunk["location"].get("chapter"),
+                            "dieu": chunk["location"].get("article"),
+                            "khoan": chunk["location"].get("clause"),
+                            "diem": chunk["location"].get("point")
                         },
                         "item_path": build_item_path(
-                            chunk.get("dieu"),
-                            chunk.get("khoan"),
-                            #chunk.get("diem")
+                            chunk["location"].get("article"),
+                            chunk["location"].get("clause")
                         ),
-
                         "section_title": chunk["section_title"],
                         "content": content,
                         "content_length": len(content),
+                        "level": chunk["level"],
                         "valid_from": meta.get("issued_date") or "1900-01-01",
                         "valid_to": None,
                     }
