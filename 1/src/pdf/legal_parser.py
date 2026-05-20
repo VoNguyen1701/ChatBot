@@ -1,21 +1,10 @@
 # src/pdf/legal_parser.py
 """
 LEGAL DOCUMENT PARSER
+    _add_article_chunks: COMBINE all points into one clause chunk -> có điều quá dài -> có thể vượt quá token limit??
+    Vấn đề "\n" trong content: Giữ nguyên để preserve format, không thay thế bằng space??
+    SimpleReferenceExtractor: Chỉ trích xuất reference tài liệu khác, không cố gắng phân biệt amendment vs refers_to, cũng không detect nested references (ví dụ "Điều 9 → Điều 7" quá phức tạp)
 
-Chuyên trách: Xây dựng cấu trúc + chunking cho tài liệu pháp lý Vietnamese
-
-SCOPE:
-✅ Build hierarchical tree: Điều → Khoản → Điểm (Article > Clause > Point)
-✅ Create chunks cho embedding/retrieval
-⏸️ Advanced extraction (legal_basis, amendments, timeline) - xem advanced_extraction.py
-
-USAGE:
-    from legal_parser import DocumentTreeBuilder, ChunkBuilder
-    
-    builder = DocumentTreeBuilder(text)
-    tree = builder.build()
-    
-    chunks = ChunkBuilder(tree, metadata).build()
 """
 
 import re
@@ -36,7 +25,6 @@ class DocumentTreeBuilder:
             text (str): Full text của tài liệu (sau khi clean_text)
         """
         self.text = text
-        self.lines = text.split('\n')
         self.tree = {
             "preamble": "",
             "chapters": [],
@@ -46,7 +34,7 @@ class DocumentTreeBuilder:
     def build(self) -> Dict:
 
         # ===== NORMALIZE TEXT =====
-        text = re.sub(r"\n+", "\n", self.text).strip()
+        text = re.sub(r"\n+", "\n", self.text).strip() #
 
         # ===== CHECK FOR CHAPTERS =====
         chapter_pattern = r'(?:^|\n)\s*Chương\s+[IVXivx\d]+\b'
@@ -60,7 +48,7 @@ class DocumentTreeBuilder:
         return self.tree
     
     def _parse_with_chapters(self, text: str):
-        """Parse document with Chương (Chapter) structure"""
+        """Split văn bản thành chương → điều → khoản → điểm"""
         
         # ===== SPLIT BY CHAPTERS =====
         chapter_blocks = re.split(
@@ -77,7 +65,7 @@ class DocumentTreeBuilder:
             if not chapter_block:
                 continue
             
-            # Extract chapter header: "Chương 1: NHỮNG QUY ĐỊNH CHUNG"
+            # Extract chapter header: "Chương 1 NHỮNG QUY ĐỊNH CHUNG"
             chapter_match = re.search(
                 r'Chương\s+([IVXivx\d]+)\s*\n+([^\n]+)',
                 chapter_block,
@@ -274,6 +262,12 @@ class ChunkBuilder:
         self.doc_ref = doc_ref or f"[{metadata.get('document_type', 'DOC')} {metadata.get('document_number', 'UNKNOWN')}]"
         self.chunks = []
     
+    def _normalize_text(self, text: str) -> str:
+        """Chuẩn hóa: Gộp nhiều dòng thừa, nhưng GIỮ LẠI cấu trúc xuống dòng đơn giản (không gộp tất cả thành một dòng)"""
+        text = re.sub(r'\n+', '\n ', text) # Giữ lại newlines nhưng thêm space sau newline để tránh dính chữ
+        text = re.sub(r' +', ' ', text) # Gộp nhiều space thành 1
+        return text.strip()
+    
     def build(self) -> List[Dict]:
         """
         Build chunks from tree structure
@@ -295,7 +289,7 @@ class ChunkBuilder:
                 "khoan": None,
                 "diem": None,
                 "section_title": "Mở đầu",
-                "content": f"{self.doc_ref} - {preamble_text}",
+                "content": f"{self.doc_ref} - {self._normalize_text(preamble_text)}",
                 "location": {"chapter": None, "article": None, "clause": None, "point": None},
                 "level": "preamble"
             })
@@ -315,7 +309,7 @@ class ChunkBuilder:
                         "khoan": None,
                         "diem": None,
                         "section_title": f"{chapter_title}: {chapter_name}",
-                        "content": f"{self.doc_ref} - {chapter_title}: {chapter_name}",
+                        "content": f"{self.doc_ref} - {chapter_title}: {self._normalize_text(chapter_name)}",
                         "location": {"chapter": chapter_num, "article": None, "clause": None, "point": None},
                         "level": "chapter"
                     })
@@ -345,7 +339,7 @@ class ChunkBuilder:
                 "khoan": None,
                 "diem": None,
                 "section_title": f"{article_title} - {article['preamble'][:60]}...",
-                "content": f"{self.doc_ref} - {article_title}: {article['preamble']}",
+                "content": f"{self.doc_ref} - {article_title}: {self._normalize_text(article['preamble'])}",
                 "location": {"chapter": chapter_num, "article": article_num, "clause": None, "point": None},
                 "level": "article"
             })
@@ -362,7 +356,7 @@ class ChunkBuilder:
                 for point in points:
                     combined_parts.append(f"{point['label']}) {point['content']}")
             
-            full_text = "\n".join(combined_parts)
+            full_text = " ".join(combined_parts)  # Use space instead of newline
             section_title = f"{article_title} - Khoản {clause_num}"
             
             self.chunks.append({
@@ -371,7 +365,7 @@ class ChunkBuilder:
                 "khoan": clause_num,
                 "diem": None,
                 "section_title": section_title,
-                "content": f"{self.doc_ref} - {section_title}\n{full_text}",
+                "content": f"{self.doc_ref} - {section_title} {self._normalize_text(full_text)}",
                 "location": {"chapter": chapter_num, "article": article_num, "clause": clause_num, "point": None},
                 "level": "clause"
             })
