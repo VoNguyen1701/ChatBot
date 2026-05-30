@@ -2,3 +2,7 @@ pdfplumber
 tqdm
 pymongo
 sentence-transformers
+requests
+beautifulsoup4
+selenium>=4.0.0
+webdriver-manager

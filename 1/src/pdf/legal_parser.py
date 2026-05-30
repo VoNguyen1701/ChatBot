@@ -170,7 +170,7 @@ class DocumentTreeBuilder:
         }
         
         # ===== FIND ALL CLAUSES =====
-        clause_pattern = r'(\d+)[\.\)]\s*([^\n]*(?:\n(?!^\d+[\.\)]).*)*)'
+        clause_pattern = r'(\d+)[\.\)]\s*([^\n]*(?:\n(?!^\d+[\.\)]).*)*)' 
         clause_matches = list(re.finditer(clause_pattern, body, re.MULTILINE))
         if not clause_matches:
             article["clauses"].append({
@@ -372,24 +372,11 @@ class ChunkBuilder:
 
 
 # =============================================================================
-# SIMPLE REFERENCE EXTRACTOR (không phức tạp)
+# 
 # =============================================================================
 class SimpleReferenceExtractor:
     """
-    Trích xuất references đơn giản (KHÔNG nested)
-    
-    Chỉ detect:
-    - "Luật 10/2014"
-    - "Nghị định 15/2023"
-    - "Thông tư 20/2025"
-    
-    Không detect:
-    - "Điều 9 → Điều 7" (quá phức tạp)
-    - Amendment vs refers_to distinction (quá nâng cao)
-    
-    Use case:
-    - Tìm các reference tài liệu khác
-    - Xây dựng knowledge graph cơ bản
+
     """
     
     def __init__(self, text: str):

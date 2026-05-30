@@ -68,8 +68,9 @@ def extract_metadata(text):
     }
 
     # 1️⃣ EXTRACT: Số hiệu & ID
-    # Regex: Tìm pattern "Số: XXX/2026" hoặc "Số XXX/2026"
-    num_match = re.search(r"Số[:\s]*([\w\/\-]+)", header_full, re.IGNORECASE)
+    # Regex: Tìm pattern "XXX/YYYY/CODE" (e.g., "143/2025/QH15", "954/2020/UBTVQH14")
+    # Handles cases where number is on next line after "Số:"
+    num_match = re.search(r"(\d{1,3}/\d{4}/[\w\-]+)", header_full)
     if num_match:
         num = num_match.group(1)
         metadata["document_number"] = num
