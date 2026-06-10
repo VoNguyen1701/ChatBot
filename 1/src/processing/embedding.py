@@ -23,7 +23,7 @@ chunk_col = db["chunks"]
 # LOAD MODEL
 # =========================
 
-print("[INFO] Loading BAAI/bge-m3...") #BAAI/bge-m3 ; VoVanPhuc/sup-SimCSE-VietNamese-phobert-base; keepitreal/vietnamese-sbert 
+print("[INFO] Loading BAAI/bge-m3...") #BAAI/bge-m3 ; VoVanPhuc/sup-SimCSE-VietNamese-phobert-base; keepitreal/vietnamese-sbert ; vinai/phobert-base
 
 model = SentenceTransformer("BAAI/bge-m3")
 

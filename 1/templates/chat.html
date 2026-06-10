@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Tra Cứu Tài Liệu Pháp Luật</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-gavel"></i>
+                    <span>Tra Cứu Pháp Luật</span>
+                </div>
+                <div class="header-controls">
+                    <select id="modelSelect" class="model-select">
+                        <option value="">Đang tải models...</option>
+                    </select>
+                    <button id="clearHistoryBtn" class="btn btn-sm btn-secondary" title="Xóa lịch sử">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button id="exportBtn" class="btn btn-sm btn-secondary" title="Export">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="main">
+            <!-- CHAT MESSAGES -->
+            <div class="chat-container">
+                <div id="chatMessages" class="chat-messages">
+                    <div class="welcome-message">
+                        <h2> Chào mừng đến với Hệ Thống Tra Cứu Tài Liệu Pháp Luật</h2>
+                        <p>Đặt câu hỏi về pháp luật và nhận câu trả lời dựa trên cơ sở dữ liệu pháp lý</p>
+                        <div class="feature-grid">
+                            <div class="feature">
+                                <i class="fas fa-search"></i>
+                                <span>Tìm kiếm vector</span>
+                            </div>
+                            <div class="feature">
+                                <i class="fas fa-quote-left"></i>
+                                <span>Trích dẫn chính xác</span>
+                            </div>
+                            <div class="feature">
+                                <i class="fas fa-robot"></i>
+                                <span>Trả lời bằng LLM</span>
+                            </div>
+                            <div class="feature">
+                                <i class="fas fa-link"></i>
+                                <span>Liên kết tài liệu</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CITATIONS PANEL -->
+                <div id="citationsPanel" class="citations-panel" style="display: none;">
+                    <div class="panel-header">
+                        <h3> Tài Liệu Tham Khảo</h3>
+                        <button class="close-btn" onclick="closeCitationsPanel()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="citationsList" class="citations-list"></div>
+                </div>
+            </div>
+
+            <!-- INPUT AREA -->
+            <div class="input-area">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="questionInput" 
+                        class="question-input" 
+                        placeholder="Đặt câu hỏi về pháp luật..."
+                        autocomplete="off"
+                    >
+                    <button id="sendBtn" class="btn btn-primary" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                    <button id="showCitationsBtn" class="btn btn-secondary" onclick="toggleCitationsPanel()" style="display: none;">
+                        <i class="fas fa-book"></i>
+                        <span id="citationCount">0</span>
+                    </button>
+                </div>
+                <div class="input-help">
+                    <span> Mẹo: Hỏi cụ thể để nhận câu trả lời chính xác hơn</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- LOADING INDICATOR -->
+    <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+        <div class="spinner"></div>
+        <p>Đang xử lý câu hỏi...</p>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
