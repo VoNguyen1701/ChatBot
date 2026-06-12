@@ -25,7 +25,7 @@ def chat():
         
         print(f"\n[API] Question: {question}")
         
-        # 1. RETRIEVAL: Truy xuất chunks
+        # 1. RETRIEVAL
         results = semantic_search(
             question,
             top_k=top_k
@@ -33,17 +33,35 @@ def chat():
         
         if not results:
             return jsonify({
-                "response": "Không tìm thấy tài liệu phù hợp",
+                "response": "Không tìm thấy thông tin liên quan trong cơ sở tài liệu phù hợp",
                 "citations": [],
                 "num_retrieved": 0,
                 "timestamp": datetime.now().isoformat()
             })
-        
+        # ===== Kiểm tra độ tin cậy retrieval =====
+        """
+        top1 = float(results[0][0])
+        top5 = float(results[min(4, len(results)-1)][0])
+
+        gap = top1 - top5
+
+        print(f"[DEBUG] top1={top1:.4f}, gap={gap:.4f}")
+
+        if top1 < 0.65 or gap < 0.05:
+            return jsonify({
+                "response": "Tôi không tìm thấy thông tin phù hợp trong cơ sở dữ liệu.",
+                "citations": [],
+                "num_retrieved": len(results),
+                "timestamp": datetime.now().isoformat()
+            })"""
         # 2. BUILD CONTEXT
         #context = "\n\n".join(
          #   [doc["content"] for score, doc in results]
-        #)
-        context = results[0][1]["content"]
+        context_list = []
+        for score, doc in results:
+            context_list.append(doc["content"])
+
+        context = "\n---\n".join(context_list)
         # 3. CALL LLM
         answer = ask_llm(question, context)
         
