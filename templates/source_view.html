@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết tài liệu</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background: #f4f7fb;
+            color: #122033;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .source-shell {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            padding: 28px;
+        }
+        .source-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .source-header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        .source-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .source-badge {
+            background: #eef4ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .source-content {
+            background: #f8fbff;
+            border: 1px solid #dfe7f2;
+            border-radius: 14px;
+            padding: 18px 20px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+        .source-empty {
+            color: #57708c;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="source-shell">
+        <div class="source-header">
+            <h1>{{ document.file_name or document._id or 'Tài liệu pháp lý' }}</h1>
+            <a href="/chat" class="btn btn-secondary">Quay lại chat</a>
+        </div>
+
+        {% if error %}
+            <div class="source-empty">{{ error }}</div>
+        {% elif document %}
+            <div class="source-meta">
+                {% if meta and meta.document_type %}
+                    <span class="source-badge">{{ meta.document_type }}</span>
+                {% endif %}
+                {% if meta and meta.document_number %}
+                    <span class="source-badge">{{ meta.document_number }}</span>
+                {% endif %}
+                {% if meta and meta.is_active is defined %}
+                    <span class="source-badge">{{ 'Còn hiệu lực' if meta.is_active else 'Hết hiệu lực' }}</span>
+                {% endif %}
+                <span class="source-badge">Trang {{ page_number or 1 }}</span>
+                {% if pdf_path %}
+                    <a class="source-badge" href="{{ pdf_path }}" target="_blank" rel="noopener">Mở PDF gốc</a>
+                {% endif %}
+            </div>
+            <div class="source-content">{{ source_text or document.content or document.text or 'Không có nội dung hiển thị.' }}</div>
+        {% else %}
+            <div class="source-empty">Không tìm thấy tài liệu.</div>
+        {% endif %}
+    </div>
+</body>
+</html>

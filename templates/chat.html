@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Tra Cứu Tài Liệu Pháp Luật</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body data-page="{{ page or 'chat' }}">
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand-block">
+                <div class="brand-icon"><i class="fas fa-gavel"></i></div>
+                <div>
+                    <div class="brand-title">Legal AI</div>
+                    <div class="brand-subtitle">Tra cứu pháp luật</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-nav="chat">
+                    <i class="fas fa-comments"></i>
+                    <span>Chat</span>
+                </button>
+                <button class="nav-item" data-nav="documents">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Tài liệu cá nhân</span>
+                </button>
+                <button class="nav-item" data-nav="admin">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Admin</span>
+                </button>
+            </nav>
+
+            <div class="history-panel">
+                <div class="panel-heading">
+                    <span>Lịch sử chat</span>
+                    <button id="clearHistoryBtn" class="text-btn" title="Xóa lịch sử">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <div id="chatHistoryGroups" class="history-groups"></div>
+            </div>
+        </aside>
+
+        <main class="workspace">
+            <header class="topbar">
+                <div class="topbar-title">
+                    <h1 id="pageTitle">Chat</h1>
+                </div>
+                <div class="topbar-actions">
+                    <select id="modelSelect" class="model-select">
+                        <option value="">Đang tải models...</option>
+                    </select>
+                    <button id="exportBtn" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-download"></i>
+                        Export
+                    </button>
+                </div>
+            </header>
+
+            <section id="pageChat" class="page-panel active">
+                <div class="chat-grid">
+                    <div class="chat-column">
+                        <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+
+                        <div class="prompt-suggestions" id="promptSuggestions">
+                            <button class="prompt-chip" data-question="Mức phạt chậm nộp thuế doanh nghiệp là bao nhiêu?">Mức phạt chậm nộp thuế doanh nghiệp là bao nhiêu?</button>
+                            <button class="prompt-chip" data-question="Thủ tục đăng ký kinh doanh gồm những gì?">Thủ tục đăng ký kinh doanh gồm những gì?</button>
+                            <button class="prompt-chip" data-question="Điều kiện để thành lập doanh nghiệp mới là gì?">Điều kiện để thành lập doanh nghiệp mới là gì?</button>
+                        </div>
+
+                        <div class="composer">
+                            <div class="composer-row">
+                                <input id="questionInput" class="question-input" type="text" placeholder="Đặt câu hỏi về pháp luật..." autocomplete="off">
+                                <button id="sendBtn" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Gửi</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <aside class="citations-panel" id="citationsPanel">
+                        <div class="panel-heading">
+                            <span>Trích dẫn nguồn</span>
+                            <button class="icon-btn" id="closeCitationsBtn" aria-label="Đóng"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div id="citationsList" class="citations-list"></div>
+                    </aside>
+                </div>
+            </section>
+
+            <section id="pageDocuments" class="page-panel">
+                <div class="doc-upload-panel">
+                    <div id="dropZone" class="dropzone">
+                        <input id="fileInput" type="file" accept=".pdf" hidden>
+                        <div class="dropzone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                        <h3>Kéo thả PDF vào đây</h3>
+                        <p>Hoặc click để chọn tài liệu cá nhân</p>
+                        <button class="btn btn-primary" id="selectFileBtn">Chọn tệp</button>
+                    </div>
+                    <div class="documents-list-wrap">
+                        <h3>Tài liệu đã đính kèm</h3>
+                        <div id="personalDocsList" class="documents-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="pageAdmin" class="page-panel">
+                <div class="admin-summary" id="adminSummaryCards"></div>
+                <div class="admin-toolbar">
+                    <input id="adminSearch" type="text" placeholder="Tìm theo tên hoặc mã văn bản...">
+                    <select id="adminStatusFilter">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="active">Còn hiệu lực</option>
+                        <option value="inactive">Hết hiệu lực</option>
+                    </select>
+                    <select id="adminTypeFilter">
+                        <option value="">Tất cả loại văn bản</option>
+                        <option value="Thông tư">Thông tư</option>
+                        <option value="Nghị định">Nghị định</option>
+                        <option value="Luật">Luật</option>
+                    </select>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tên file</th>
+                                <th>Mã văn bản</th>
+                                <th>Loại văn bản</th>
+                                <th>Ngày tải lên</th>
+                                <th>Kích thước</th>
+                                <th>Trạng thái</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+        <div class="spinner"></div>
+        <p>Đang xử lý...</p>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
