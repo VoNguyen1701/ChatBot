@@ -141,9 +141,6 @@ async function loadChatHistory() {
         const history = data.history || [];
         state.chatHistory = history;
 
-        const groups = data.groups || {};
-        renderHistoryGroups(groups);
-
         if (!history.length) {
             renderWelcomeMessage();
             return;
@@ -151,7 +148,7 @@ async function loadChatHistory() {
 
         const chatMessages = document.getElementById('chatMessages');
         chatMessages.innerHTML = '';
-        history.slice(-6).forEach((entry) => {
+        history.forEach((entry) => {
             addMessageToChat(entry.question, 'user', entry.timestamp);
             addMessageToChat(entry.response, 'assistant', entry.timestamp);
             if (entry.citations && entry.citations.length) {
@@ -162,56 +159,6 @@ async function loadChatHistory() {
         console.error('Error loading history:', error);
         renderWelcomeMessage();
     }
-}
-
-function renderHistoryGroups(groups) {
-    const historyPanel = document.getElementById('chatHistoryGroups');
-    if (!historyPanel) return;
-
-    historyPanel.innerHTML = '';
-    const orderedGroups = [
-        { key: 'today', label: 'Hôm nay' },
-        { key: 'week', label: 'Tuần trước' },
-        { key: 'month', label: 'Tháng trước' }
-    ];
-
-    orderedGroups.forEach(({ key, label }) => {
-        const group = groups[key] || { items: [] };
-        const groupEl = document.createElement('div');
-        groupEl.className = 'history-group';
-
-        const title = document.createElement('div');
-        title.className = 'history-group-title';
-        title.textContent = label;
-        groupEl.appendChild(title);
-
-        const list = document.createElement('div');
-        list.className = 'history-group-list';
-
-        if (!group.items || !group.items.length) {
-            const empty = document.createElement('div');
-            empty.className = 'history-empty';
-            empty.textContent = 'Chưa có hội thoại';
-            list.appendChild(empty);
-        } else {
-            group.items.slice().reverse().forEach((item) => {
-                const row = document.createElement('button');
-                row.type = 'button';
-                row.className = 'history-item';
-                row.textContent = (item.question || 'Câu hỏi').slice(0, 44);
-                row.title = item.question || 'Câu hỏi';
-                row.addEventListener('click', () => {
-                    const input = document.getElementById('questionInput');
-                    input.value = item.question || '';
-                    input.focus();
-                });
-                list.appendChild(row);
-            });
-        }
-
-        groupEl.appendChild(list);
-        historyPanel.appendChild(groupEl);
-    });
 }
 
 async function sendMessage() {
@@ -467,9 +414,6 @@ function renderAdminSummary() {
         const today = new Date();
         return uploadDate.toDateString() === today.toDateString();
     }).length;
-    const successCount = state.adminSummary.success_count ?? 0;
-    const processingCount = state.adminSummary.processing_count ?? 0;
-    const errorCount = state.adminSummary.error_count ?? 0;
 
     summary.innerHTML = `
         <div class="summary-card summary-blue">
@@ -481,24 +425,8 @@ function renderAdminSummary() {
             <strong>${activeCount}</strong>
         </div>
         <div class="summary-card summary-red">
-            <span class="summary-label">Hết hiệu lực</span>
-            <strong>${inactiveCount}</strong>
-        </div>
-        <div class="summary-card summary-gold">
             <span class="summary-label">Tải lên hôm nay</span>
             <strong>${todayUploads}</strong>
-        </div>
-        <div class="summary-card summary-purple">
-            <span class="summary-label">Thành công</span>
-            <strong>${successCount}</strong>
-        </div>
-        <div class="summary-card summary-warning">
-            <span class="summary-label">Đang xử lý</span>
-            <strong>${processingCount}</strong>
-        </div>
-        <div class="summary-card summary-danger">
-            <span class="summary-label">Lỗi</span>
-            <strong>${errorCount}</strong>
         </div>
     `;
 }
@@ -521,9 +449,9 @@ function renderAdminTable() {
             <td>
                 <div class="doc-file-name">${doc.file_name || doc.doc_id || 'Unknown'}</div>
             </td>
-            <td>${doc.document_number || '—'}</td>
-            <td>${doc.document_type || '—'}</td>
-            <td>${formatDate(doc.uploaded_at)}</td>
+            <td>${doc.metadata.document_number || '—'}</td>
+            <td>${doc.metadata.document_type || '—'}</td>
+            <td>${formatDate(doc.created_at)}</td>
             <td>${formatFileSize(doc.size || 0)}</td>
             <td><span class="status-badge ${isActive ? 'active' : 'inactive'}">${statusLabel}</span></td>
             <td>
