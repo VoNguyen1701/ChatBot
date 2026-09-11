@@ -108,11 +108,11 @@
             <section id="pageAdmin" class="page-panel">
                 <div class="admin-summary" id="adminSummaryCards"></div>
                 <div class="admin-toolbar">
-                    <input id="adminSearch" type="text" placeholder="Tìm theo tên hoặc mã văn bản...">
-                    <select id="adminStatusFilter">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="active">Còn hiệu lực</option>
-                        <option value="inactive">Hết hiệu lực</option>
+                    <input id="adminSearch" type="text" placeholder="Tìm theo mã văn bản hoặc tên file..." autocomplete="off">
+                    <datalist id="adminDocumentSuggestions"></datalist>
+
+                    <select id="adminCategoryFilter">
+                        <option value="">Tất cả lĩnh vực</option>
                     </select>
                     <select id="adminTypeFilter">
                         <option value="">Tất cả loại văn bản</option>

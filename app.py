@@ -16,7 +16,6 @@ app = Flask(__name__)
 def home():
     return render_template("chat.html", page="chat")
 
-# ĐANG LỖI CHỖ ADMIN NÀY
 @app.route("/documents")
 def personal_documents():
     return render_template("chat.html", page="documents")
@@ -143,22 +142,125 @@ def get_stats():
 
 @app.route("/api/admin/documents", methods=["GET"])
 def get_documents():
-    """Lấy danh sách các tài liệu thực tế từ MongoDB"""
     try:
         db = get_db()
+
         if "documents" not in db.list_collection_names():
             return jsonify({"documents": []})
 
         documents = []
-        for doc in db["documents"].find({}):
-            if "_id" in doc:
-                doc["_id"] = str(doc["_id"])
-            documents.append(doc)
 
-        return jsonify({"documents": documents})
+        for doc in db["documents"].find({}):
+
+            metadata = doc.get("metadata", {}) or {}
+
+            doc_id = (
+                metadata.get("doc_id")
+                or doc.get("_id")
+                or ""
+            )
+
+            file_name = doc.get("file_name", "")
+
+            document_number = metadata.get(
+                "document_number", ""
+            )
+
+            document_type = metadata.get(
+                "document_type", ""
+            )
+
+            title = metadata.get(
+                "title", ""
+            )
+
+            issuer = metadata.get(
+                "issuer", ""
+            )
+
+            issued_date = metadata.get(
+                "issued_date", ""
+            )
+
+            category = doc.get(
+                "category", ""
+            )
+
+            created_at = doc.get("created_at")
+
+            if isinstance(created_at, datetime):
+                uploaded_at = created_at.isoformat()
+            else:
+                uploaded_at = str(created_at or "")
+
+            # Document cũ chưa có is_active
+            # => mặc định là true
+            is_active = doc.get("is_active", True)
+
+            size = doc.get("size", 0) or 0
+
+            documents.append({
+                "doc_id": str(doc_id),
+                "file_name": file_name,
+                "document_number": document_number,
+                "document_type": document_type,
+                "title": title,
+                "issuer": issuer,
+                "issued_date": issued_date,
+                "category": category,
+                "uploaded_at": uploaded_at,
+                "size": size,
+                "is_active": bool(is_active)
+            })
+        search = request.args.get(
+            "search",
+            ""
+        ).strip().lower()
+
+        category_filter = request.args.get(
+            "category",
+            ""
+        ).strip()
+
+        type_filter = request.args.get(
+            "type",
+            ""
+        ).strip()
+        if search:
+            documents = [
+                doc
+                for doc in documents
+                if search in
+                str(
+                    doc["document_number"]
+                ).lower()
+            ]
+        if category_filter:
+            documents = [
+                doc
+                for doc in documents
+                if doc["category"] ==
+                category_filter
+            ]
+        if type_filter:
+            documents = [
+                doc
+                for doc in documents
+                if doc["document_type"] ==
+                type_filter
+            ]
+
+        return jsonify({
+            "documents": documents
+        })
+
     except Exception as e:
-        print(f"[ERROR /api/admin/documents]: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print("ERROR /api/admin/documents:", e)
+
+        return jsonify({
+            "error": str(e),
+            "documents": []
+        }), 500
 @app.route("/api/admin/documents/<doc_id>/status", methods=["PATCH"])
 def update_document_status(doc_id):
     try:
@@ -257,6 +359,59 @@ def upload_document():
         print(f"[ERROR /api/admin/upload]: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/admin/dashboard", methods=["GET"])
+def admin_dashboard_api():
+    try:
+        db = get_db()
+
+        if "documents" not in db.list_collection_names():
+            return jsonify({
+                "summary": {
+                    "document_count": 0,
+                    "category_count": 0,
+                    "today_upload_count": 0
+                }
+            })
+
+        collection = db["documents"]
+
+        total = collection.count_documents({})
+
+        categories = collection.distinct("category")
+
+        category_count = len([
+            category
+            for category in categories
+            if category and str(category).strip()
+        ])
+
+        today = datetime.now().date()
+
+        today_upload_count = 0
+
+        for doc in collection.find({}):
+
+            created_at = doc.get("created_at")
+
+            if isinstance(created_at, datetime):
+                if created_at.date() == today:
+                    today_upload_count += 1
+
+        return jsonify({
+            "summary": {
+                "document_count": total,
+                "category_count": category_count,
+                "today_upload_count": today_upload_count
+            }
+        })
+
+    except Exception as e:
+        print("ERROR /api/admin/dashboard:", e)
+
+        return jsonify({
+            "error": str(e)
+        }), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
+

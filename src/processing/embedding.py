@@ -4,6 +4,7 @@ from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 import sys
 from pathlib import Path
+import os
 
 from src.storage.mongo import get_db
 # Setup path
@@ -33,35 +34,70 @@ print("[INFO] Model loaded")
 # GET CHUNKS
 # =========================
 
-documents = chunk_col.find({})  # Lấy TẤT CẢ chunks
+documents = list(
+    chunk_col.find(
+        {
+            "$or": [
+                {"embedding": {"$exists": False}},
+                {"embedding": None}
+            ]
+        }
+    )
+)
 
-count = chunk_col.count_documents({})
+count = len(documents)
 
-print(f"[INFO] Re-embedding {count} chunks...")
+print(f"[INFO] Chunks cần embedding: {count}")
+
+
+if count == 0:
+    print("[INFO] Không có chunk mới cần embedding.")
+    print("[INFO] DONE")
+    exit()
+
 
 # =========================
 # EMBEDDING
 # =========================
+success = 0
+failed = 0
 
 for doc in tqdm(documents, total=count):
 
     text = doc.get("content", "")
 
-    if not text.strip():
+    if not text or not text.strip():
         continue
 
-    embedding = model.encode(
-        text,
-        normalize_embeddings=True
-    ).tolist()
+    try:
 
-    chunk_col.update_one(
-        {"_id": doc["_id"]},
-        {
-            "$set": {
-                "embedding": embedding
+        embedding = model.encode(
+            text,
+            normalize_embeddings=True
+        ).tolist()
+
+        chunk_col.update_one(
+            {"_id": doc["_id"]},
+            {
+                "$set": {
+                    "embedding": embedding
+                }
             }
-        }
-    )
+        )
+
+        success += 1
+
+    except Exception as e:
+
+        failed += 1
+
+        print(
+            f"\n[ERROR] Chunk {doc.get('_id')}: {e}"
+        )
+print("\n========== EMBEDDING SUMMARY ==========")
+
+print(f"Total cần embedding : {count}")
+print(f"Successfully embedded: {success}")
+print(f"Failed               : {failed}")
 
 print("[INFO] DONE")

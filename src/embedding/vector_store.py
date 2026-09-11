@@ -36,7 +36,7 @@ import faiss
 class VectorStore:
     """Quản lý vector embedding với MongoDB và FAISS"""
     
-    def __init__(self, db_name: str = "ai1_db", mongo_uri: str = None):
+    def __init__(self, db_name: str = "legal_rag_db", mongo_uri: str = None):
         """
         Khởi tạo vector store, kết nối MongoDB và chuẩn bị cấu trúc lưu trữ
         

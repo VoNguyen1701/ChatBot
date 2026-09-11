@@ -108,7 +108,7 @@ function setupEventListeners() {
     });
 
     document.getElementById('adminSearch').addEventListener('input', loadAdminDashboard);
-    document.getElementById('adminStatusFilter').addEventListener('change', loadAdminDashboard);
+    document.getElementById('adminCategoryFilter').addEventListener('change', loadAdminDashboard);
     document.getElementById('adminTypeFilter').addEventListener('change', loadAdminDashboard);
 }
 
@@ -383,47 +383,156 @@ async function deletePersonalDoc(filename) {
 }
 
 async function loadAdminDashboard() {
-    const search = document.getElementById('adminSearch').value.trim();
-    const status = document.getElementById('adminStatusFilter').value;
-    const type = document.getElementById('adminTypeFilter').value;
+    const search =
+        document.getElementById('adminSearch').value.trim();
+
+    const category =
+        document.getElementById('adminCategoryFilter').value;
+
+    const type =
+        document.getElementById('adminTypeFilter').value;
 
     try {
         const params = new URLSearchParams();
-        if (search) params.append('search', search);
-        if (status) params.append('status', status);
-        if (type) params.append('type', type);
 
-        const response = await fetch(`/api/admin/documents?${params.toString()}`);
+        if (search) {
+            params.append('search', search);
+        }
+
+        if (category) {
+            params.append('category', category);
+        }
+
+        if (type) {
+            params.append('type', type);
+        }
+
+        const response = await fetch(
+            `/api/admin/documents?${params.toString()}`
+        );
+
         const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.error || 'Không thể tải danh sách tài liệu'
+            );
+        }
+
         state.adminDocuments = data.documents || [];
+
+        // Cập nhật danh sách lĩnh vực
+        renderAdminCategoryFilter();
+
+        // Cập nhật gợi ý mã văn bản
+        renderAdminDocumentSuggestions();
+
         renderAdminTable();
         renderAdminSummary();
+
     } catch (error) {
-        console.error(error);
+        console.error(
+            'Lỗi loadAdminDashboard:',
+            error
+        );
     }
 }
+function renderAdminCategoryFilter() {
+    const select =
+        document.getElementById('adminCategoryFilter');
 
+    if (!select) return;
+
+    const currentValue = select.value;
+
+    const categories = [
+        ...new Set(
+            state.adminDocuments
+                .map(doc => doc.category)
+                .filter(category =>
+                    category &&
+                    String(category).trim()
+                )
+        )
+    ].sort();
+
+    select.innerHTML = `
+        <option value="">Tất cả lĩnh vực</option>
+
+        ${categories.map(category => `
+            <option value="${category}">
+                ${category}
+            </option>
+        `).join('')}
+    `;
+
+    // Giữ lại lựa chọn hiện tại nếu vẫn tồn tại
+    if (categories.includes(currentValue)) {
+        select.value = currentValue;
+    }
+}
+function renderAdminDocumentSuggestions() {
+    const datalist =
+        document.getElementById(
+            'adminDocumentSuggestions'
+        );
+
+    if (!datalist) return;
+
+    const documentNumbers = [
+        ...new Set(
+            state.adminDocuments
+                .map(doc => doc.document_number)
+                .filter(number =>
+                    number &&
+                    String(number).trim()
+                )
+        )
+    ];
+
+    datalist.innerHTML = documentNumbers
+        .map(number => `
+            <option value="${number}">
+        `)
+        .join('');
+}
 function renderAdminSummary() {
     const summary = document.getElementById('adminSummaryCards');
-    const total = state.adminSummary.document_count || state.adminDocuments.length;
-    const activeCount = state.adminSummary.active_document_count ?? state.adminDocuments.filter((doc) => doc.is_active !== false).length;
-    const inactiveCount = state.adminSummary.inactive_document_count ?? Math.max(total - activeCount, 0);
-    const todayUploads = state.adminSummary.today_upload_count ?? state.adminDocuments.filter((doc) => {
-        if (!doc.uploaded_at) return false;
-        const uploadDate = new Date(doc.uploaded_at);
-        const today = new Date();
-        return uploadDate.toDateString() === today.toDateString();
-    }).length;
+
+    const total =
+        state.adminSummary.document_count ??
+        state.adminDocuments.length;
+
+    const categoryCount =
+        state.adminSummary.category_count ??
+        new Set(
+            state.adminDocuments
+                .map(doc => doc.category)
+                .filter(Boolean)
+        ).size;
+
+    const todayUploads =
+        state.adminSummary.today_upload_count ??
+        state.adminDocuments.filter((doc) => {
+            if (!doc.uploaded_at) return false;
+
+            const uploadDate = new Date(doc.uploaded_at);
+            const today = new Date();
+
+            return uploadDate.toDateString() === today.toDateString();
+        }).length;
 
     summary.innerHTML = `
         <div class="summary-card summary-blue">
             <span class="summary-label">Tổng tài liệu</span>
             <strong>${total}</strong>
         </div>
+
         <div class="summary-card summary-green">
-            <span class="summary-label">Còn hiệu lực</span>
-            <strong>${activeCount}</strong>
+            <span class="summary-label">Lĩnh vực</span>
+            <strong>${categoryCount}</strong>
         </div>
+
         <div class="summary-card summary-red">
             <span class="summary-label">Tải lên hôm nay</span>
             <strong>${todayUploads}</strong>
@@ -436,21 +545,21 @@ function renderAdminTable() {
     tableBody.innerHTML = '';
 
     if (!state.adminDocuments.length) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="empty-state">Không tìm thấy tài liệu nào.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" class="empty-state">Không tìm thấy tài liệu nào.</td></tr>';
         return;
     }
 
     state.adminDocuments.forEach((doc) => {
         const row = document.createElement('tr');
-        const isActive = doc.is_active !== false;
+        const isActive = doc.is_active === true;
         const statusLabel = isActive ? 'Còn hiệu lực' : 'Hết hiệu lực';
 
         row.innerHTML = `
             <td>
                 <div class="doc-file-name">${doc.file_name || doc.doc_id || 'Unknown'}</div>
             </td>
-            <td>${doc.metadata.document_number || '—'}</td>
-            <td>${doc.metadata.document_type || '—'}</td>
+            <td>${doc.document_number || '—'}</td>
+            <td>${doc.document_type || '—'}</td>
             <td>${formatDate(doc.created_at)}</td>
             <td>${formatFileSize(doc.size || 0)}</td>
             <td><span class="status-badge ${isActive ? 'active' : 'inactive'}">${statusLabel}</span></td>
