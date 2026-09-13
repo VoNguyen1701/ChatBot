@@ -53,7 +53,21 @@ def chat():
 
         print(f"[DEBUG] top1={top1:.4f}, gap={gap:.4f}")
 
-        if top1 < 0.60 or gap < 0.05:
+        retrieval_ok = False
+
+        # Top 1 rất cao
+        if top1 >= 0.70:
+            retrieval_ok = True
+
+        # Top 1 trung bình -> cần gap
+        elif top1 >= 0.60 and gap >= 0.05:
+            retrieval_ok = True
+
+        if not retrieval_ok:
+            print(
+                "[RETRIEVAL] Confidence thấp -> không gọi LLM"
+            )
+
             return jsonify({
                 "response": "Tôi không tìm thấy thông tin phù hợp trong cơ sở dữ liệu.",
                 "citations": [],

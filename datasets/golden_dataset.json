@@ -2,374 +2,436 @@
   {
     "query_id": "q001",
     "query": "Cá nhân cư trú theo Luật Thuế TNCN năm 2025 phải đáp ứng điều kiện có mặt tại Việt Nam bao nhiêu ngày trở lên tính trong một năm dương lịch hoặc trong 12 tháng liên tục kể từ ngày đầu tiên có mặt?",
-    "relevant_ids": [
-      "de24a45c-8a8c-47f7-8130-190570c37cbe"
-    ],
-    "metadata": [
+    "question_type": "Direct",
+    "difficulty": "Easy",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "de24a45c-8a8c-47f7-8130-190570c37cbe",
         "doc_id": "109_2025_QH15",
         "chapter": 1,
         "dieu": 2,
         "khoan": [
           2
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q002",
     "query": "Luật Thuế thu nhập cá nhân số 109/2025/QH15 có hiệu lực thi hành từ ngày tháng năm nào (trừ các quy định liên quan đến thu nhập từ kinh doanh, tiền lương, tiền công của cá nhân cư trú)?",
-    "relevant_ids": [
-      "ee671851-8e46-4541-adbc-f422a7e59303"
-    ],
-    "metadata": [
+    "question_type": "Direct",
+    "difficulty": "Easy",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "ee671851-8e46-4541-adbc-f422a7e59303",
         "doc_id": "109_2025_QH15",
         "chapter": 4,
         "dieu": 29,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q003",
     "query": "Theo sửa đổi bổ sung Khoản 25 Điều 5, hộ và cá nhân sản xuất, kinh doanh có mức doanh thu năm từ bao nhiêu triệu đồng trở xuống thì thuộc đối tượng không chịu thuế giá trị gia tăng?",
-    "relevant_ids": [
-      "11c711da-ec02-456b-871c-4c1f3d52d0db"
-    ],
-    "metadata": [
+    "question_type": "Direct",
+    "difficulty": "Easy",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "11c711da-ec02-456b-871c-4c1f3d52d0db",
         "doc_id": "149_2025_QH15",
         "chapter": null,
         "dieu": 1,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q004",
     "query": "Theo Nghị quyết số 954/2020/UBTVQH14 của Ủy ban Thường vụ Quốc hội, mức giảm trừ gia cảnh đối với bản thân đối tượng nộp thuế được điều chỉnh là bao nhiêu tiền một tháng?",
-    "relevant_ids": [
-      "f66b04ed-e356-42db-9a22-6abdbe010232"
-    ],
-    "metadata": [
+    "question_type": "Direct",
+    "difficulty": "Easy",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "f66b04ed-e356-42db-9a22-6abdbe010232",
         "doc_id": "954_2020_UBTVQH14",
         "chapter": null,
         "dieu": 1,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q005",
     "query": "Phạm vi điều chỉnh của Luật An ninh mạng số 116/2025/QH15 quy định về những nội dung cốt lõi nào?",
-    "relevant_ids": [
-      "e3598e8e-c3b9-4270-9e16-35a26ae4e921"
-    ],
-    "metadata": [
+    "question_type": "Direct",
+    "difficulty": "Easy",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "e3598e8e-c3b9-4270-9e16-35a26ae4e921",
         "doc_id": "116_2025_QH15",
         "chapter": 1,
         "dieu": 1,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q006",
     "query": "Cơ quan nào có thẩm quyền cấp, điều chỉnh và thu hồi Giấy chứng nhận đăng ký đầu tư theo định nghĩa tại Luật Đầu tư năm 2025?",
-    "relevant_ids": [
-      "d13623ff-0fad-4260-8540-59266a9cdfe8"
-    ],
-    "metadata": [
+    "question_type": "Direct",
+    "difficulty": "Easy",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "d13623ff-0fad-4260-8540-59266a9cdfe8",
         "doc_id": "143_2025_QH15",
         "chapter": 1,
         "dieu": 3,
         "khoan": [
           2
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q007",
     "query": "Một chuyên gia nước ngoài lần đầu đến Việt Nam làm việc, nếu tính trong vòng một năm trọn vẹn từ ngày đặt chân đến mà tổng thời gian lưu trú thực tế đạt từ 183 ngày trở lên thì tư cách nghĩa vụ thuế của họ tại Việt Nam được xác định như thế nào?",
-    "relevant_ids": [
-      "de24a45c-8a8c-47f7-8130-190570c37cbe"
-    ],
-    "metadata": [
+    "question_type": "Paraphrase",
+    "difficulty": "Medium",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "de24a45c-8a8c-47f7-8130-190570c37cbe",
         "doc_id": "109_2025_QH15",
         "chapter": 1,
         "dieu": 2,
         "khoan": [
           2
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q008",
     "query": "Khi một doanh nghiệp thương mại mua nông sản thô (chưa qua chế biến hoặc mới chỉ sơ chế thông thường) từ một hợp tác xã nông nghiệp rồi bán lại cho một doanh nghiệp khác thì nghiệp vụ bán ra này có phải thực hiện việc tính toán và kê khai đóng thuế GTGT đầu ra hay không?",
-    "relevant_ids": [
-      "11c711da-ec02-456b-871c-4c1f3d52d0db"
-    ],
-    "metadata": [
+    "question_type": "Paraphrase",
+    "difficulty": "Medium",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "11c711da-ec02-456b-871c-4c1f3d52d0db",
         "doc_id": "149_2025_QH15",
         "chapter": null,
         "dieu": 1,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q009",
     "query": "Văn bản pháp lý nào thể hiện sự công nhận chính thức của cơ quan nhà nước có thẩm quyền về các mục tiêu, địa điểm, quy mô kinh doanh, tiến độ cũng như các chính sách đặc biệt của một dự án trước khi triển khai?",
-    "relevant_ids": [
-      "9bee533a-ee0d-498e-8957-c2553837ce20"
-    ],
-    "metadata": [
+    "question_type": "Paraphrase",
+    "difficulty": "Medium",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "9bee533a-ee0d-498e-8957-c2553837ce20",
         "doc_id": "143_2025_QH15",
         "chapter": 1,
         "dieu": 3,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q010",
     "query": "Các chứng nhận hoặc giấy phép hoạt động kinh doanh trong mảng sản phẩm, dịch vụ an toàn thông tin mạng đã được cơ quan nhà nước cấp dựa theo Luật An toàn thông tin mạng năm 2015 trước đây thì số phận pháp lý của chúng ra sao khi Luật An ninh mạng năm 2025 chính thức bắt đầu có hiệu lực?",
-    "relevant_ids": [
-      "32d36cf4-fb89-4a5c-8510-8dd273271cb0"
-    ],
-    "metadata": [
+    "question_type": "Paraphrase",
+    "difficulty": "Medium",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "32d36cf4-fb89-4a5c-8510-8dd273271cb0",
         "doc_id": "116_2025_QH15",
         "chapter": 8,
         "dieu": 45,
         "khoan": [
           2
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q011",
     "query": "Đối với sắc thuế thu nhập từ tiền lương, tiền công của người lao động trong nước thuộc diện cư trú, niên độ/kỳ tính thuế đầu tiên chịu sự điều chỉnh tổng thể bởi đạo luật mới năm 2025 là kỳ tính thuế của năm nào?",
-    "relevant_ids": [
-      "f1b12058-9a6c-44c7-9f70-c933ea42f1cf"
-    ],
-    "metadata": [
+    "question_type": "Paraphrase",
+    "difficulty": "Medium",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "f1b12058-9a6c-44c7-9f70-c933ea42f1cf",
         "doc_id": "109_2025_QH15",
         "chapter": 4,
         "dieu": 29,
         "khoan": [
           2
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q012",
     "query": "Ông A là người nước ngoài, không đăng ký hộ khẩu thường trú hay tạm trú dài hạn tại Việt Nam, và tổng số ngày có mặt tại Việt Nam trong năm dương lịch 2026 chỉ là 120 ngày. Tuy nhiên, ông có thu nhập phát sinh từ việc cung cấp dịch vụ tư vấn cho một công ty tại TP.HCM. Ông A có phải nộp thuế TNCN tại Việt Nam không, và dựa trên nguyên tắc nào?",
-    "relevant_ids": [
-      "0ce77902-a54d-4989-b5ca-154f645e05f5"
-    ],
-    "metadata": [
+    "question_type": "Inferential",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "0ce77902-a54d-4989-b5ca-154f645e05f5",
         "doc_id": "109_2025_QH15",
         "chapter": 1,
         "dieu": 2,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q013",
     "query": "Một hộ kinh doanh cá thể chuyên bán hàng tạp hóa có doanh thu thống kê của năm 2026 đạt mức 480 triệu đồng. Trong năm, hộ này có mua một số thiết bị phục vụ quản lý có hóa đơn thuế GTGT đầu vào. Hộ kinh doanh này có được hoàn thuế hoặc khấu trừ số thuế GTGT đầu vào của các thiết bị đó không? Vì sao?",
-    "relevant_ids": [
-      "11c711da-ec02-456b-871c-4c1f3d52d0db"
-    ],
-    "metadata": [
+    "question_type": "Inferential",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "11c711da-ec02-456b-871c-4c1f3d52d0db",
         "doc_id": "149_2025_QH15",
         "chapter": null,
         "dieu": 1,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q014",
     "query": "Một hệ thống thông tin cốt lõi của doanh nghiệp đã được thẩm định và phê duyệt phương án bảo vệ theo cấp độ 3 từ năm 2024 (theo Luật cũ). Khi Luật mới 2025 có hiệu lực, doanh nghiệp có bị hủy bỏ kết quả phân loại cấp độ này để làm lại từ đầu không? Họ phải làm gì tiếp theo?",
-    "relevant_ids": [
-      "b3fc9dd1-44c9-42ac-8852-0039aa6dc243"
-    ],
-    "metadata": [
+    "question_type": "Inferential",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "b3fc9dd1-44c9-42ac-8852-0039aa6dc243",
         "doc_id": "116_2025_QH15",
         "chapter": 8,
         "dieu": 45,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q015",
     "query": "Giả sử một cá nhân cư trú có phát sinh khoản thu nhập chịu thuế từ việc \"chuyển nhượng bất động sản\" vào tháng 02 năm 2026. Khoản thu nhập này sẽ chịu sự điều chỉnh của Luật Thuế TNCN năm 2007 (sửa đổi) hay áp dụng ngay Luật Thuế TNCN mới năm 2025?",
-    "relevant_ids": [
-      "f1b12058-9a6c-44c7-9f70-c933ea42f1cf",
-      "ee671851-8e46-4541-adbc-f422a7e59303"
-    ],
-    "metadata": [
+    "question_type": "Inferential",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "ee671851-8e46-4541-adbc-f422a7e59303",
         "doc_id": "109_2025_QH15",
         "chapter": 4,
         "dieu": 29,
         "khoan": [
-          1,
+          1
+        ],
+        "diem": []
+      },
+      {
+        "chunk_id": "f1b12058-9a6c-44c7-9f70-c933ea42f1cf",
+        "doc_id": "109_2025_QH15",
+        "chapter": 4,
+        "dieu": 29,
+        "khoan": [
           2
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q016",
     "query": "Một cá nhân cư trú mở một cửa hàng bán lẻ có doanh thu năm 2026 đạt mức 450 triệu đồng. Hãy xác định: Cá nhân này có thuộc diện chịu thuế GTGT đối với hàng hóa bán ra không? Và đối với sắc thuế TNCN, doanh thu kinh doanh này có bị tính vào thu nhập chịu thuế TNCN theo tinh thần đồng bộ của hệ thống luật thuế mới hay không?",
-    "relevant_ids": [
-      "11c711da-ec02-456b-871c-4c1f3d52d0db"
-    ],
-    "metadata": [
+    "question_type": "Multi-hop",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "11c711da-ec02-456b-871c-4c1f3d52d0db",
         "doc_id": "149_2025_QH15",
         "chapter": null,
         "dieu": 1,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q017",
     "query": "Đến hết tháng 3 năm 2026, khi tính toán thuế TNCN tạm nộp từ tiền lương, tiền công cho một kỹ sư tại doanh nghiệp Việt Nam, kế toán phải áp dụng mức giảm trừ gia cảnh cho bản thân người nộp thuế dựa trên văn bản nào và ở mức bao nhiêu, biết rằng Luật Thuế TNCN số 109/2025/QH15 đã quy định hiệu lực thi hành các điều khoản tiền lương áp dụng từ kỳ tính thuế 2026?",
-    "relevant_ids": [
-      "f1b12058-9a6c-44c7-9f70-c933ea42f1cf"
-    ],
-    "metadata": [
+    "question_type": "Multi-hop",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "f1b12058-9a6c-44c7-9f70-c933ea42f1cf",
         "doc_id": "109_2025_QH15",
         "chapter": null,
         "dieu": 29,
         "khoan": [
           2
-        ]
+        ],
+        "diem": []
+      },
+      {
+        "chunk_id": "f66b04ed-e356-42db-9a22-6abdbe010232",
+        "doc_id": "954_2020_UBTVQH14",
+        "chapter": null,
+        "dieu": 1,
+        "khoan": [
+          1
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q018",
     "query": "Cá nhân không cư trú có thu nhập phát sinh tại Việt Nam chịu sự điều chỉnh căn cứ tính thuế theo phương pháp nào chung?",
-    "relevant_ids": [
-      "fc962e2f-6066-48f7-9819-1923c1d5460d"
-    ],
-    "metadata": [
+    "question_type": "Multi-hop",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "5c08c89b-f2ef-4d98-aa05-8fa78557ded3",
         "doc_id": "109_2025_QH15",
         "chapter": 3,
         "dieu": null,
-        "khoan": []
+        "khoan": [],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q019",
     "query": "Một điều khoản ưu đãi miễn giảm thuế thu nhập doanh nghiệp được ký phê duyệt phát sinh thực tế vào tháng 3 năm 2026. Khi thực hiện thủ tục để hưởng ưu đãi này vào cuối năm 2026, cơ quan quản lý sẽ áp dụng quy trình thủ tục dựa trên Luật Quản lý thuế số 38/2019/QH14 hay Luật mới số 108/2025/QH15?",
-    "relevant_ids": [
-      "2dd59785-7589-47c0-ab0e-f6bdfe156a01"
-    ],
-    "metadata": [
+    "question_type": "Multi-hop",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "2dd59785-7589-47c0-ab0e-f6bdfe156a01",
         "doc_id": "108_2025_QH15",
         "chapter": 9,
         "dieu": 53,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q020",
     "query": "Phế phẩm, phụ phẩm, phế liệu được thu hồi trong quá trình sản xuất thì khi bán ra áp dụng mức thuế suất thuế GTGT được xác định như thế nào?",
-    "relevant_ids": [
-      "1f54b352-1ebe-4507-b681-08a36d3436b7"
-    ],
-    "metadata": [
+    "question_type": "Multi-hop",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "1f54b352-1ebe-4507-b681-08a36d3436b7",
         "doc_id": "149_2025_QH15",
         "chapter": null,
         "dieu": 1,
         "khoan": [
           2
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q021",
     "query": "Luật Quản lý thuế năm 2025 quy định đối tượng nộp thuế bao gồm những tổ chức, cá nhân nước ngoài nào hoạt động trong môi trường số?",
-    "relevant_ids": [
-      "a2d657d6-fc75-4aeb-ae25-6c7ab88a8480"
-    ],
-    "metadata": [
+    "question_type": "Multi-hop",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "a2d657d6-fc75-4aeb-ae25-6c7ab88a8480",
         "doc_id": "108_2025_QH15",
         "chapter": 1,
         "dieu": 2,
         "khoan": [
           1
-        ]
+        ],
+        "diem": []
       }
     ]
   },
   {
     "query_id": "q022",
     "query": "Lộ trình áp dụng toàn bộ các hình thức giao dịch điện tử trong lĩnh vực quản lý thuế phải bảo đảm hoàn thành trước thời điểm nào?",
-    "relevant_ids": [
-      "d84b9269-2193-4289-8d84-ade638b7c44c"
-    ],
-    "metadata": [
+    "question_type": "Multi-hop",
+    "difficulty": "Hard",
+    "answerable": true,
+    "relevant_chunks": [
       {
+        "chunk_id": "d84b9269-2193-4289-8d84-ade638b7c44c",
         "doc_id": "108_2025_QH15",
         "chapter": 9,
         "dieu": 52,
         "khoan": [
           4
-        ]
+        ],
+        "diem": []
       }
     ]
   }

@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import json
 
 client = MongoClient("mongodb://dungnguyet17012005_db_user:Dungnguyet17012005~@ac-hzf04zl-shard-00-00.bzpmnh4.mongodb.net:27017,ac-hzf04zl-shard-00-01.bzpmnh4.mongodb.net:27017,ac-hzf04zl-shard-00-02.bzpmnh4.mongodb.net:27017/?ssl=true&replicaSet=atlas-qutlkr-shard-0&authSource=admin&appName=Cluster0")
-db = client["ai1_db"]
+db = client["legal_rag_db"]
 
 chunks = list(
     db.chunks.find(

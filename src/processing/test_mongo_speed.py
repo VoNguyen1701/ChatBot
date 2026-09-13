@@ -4,66 +4,50 @@ from src.storage.mongo import get_db
 db = get_db()
 chunk_col = db["chunks"]
 
-print("=== TEST MONGODB ATLAS ===")
+print("=== TEST MONGODB SPEED ===")
 
-
-# =========================
-# TEST 1: 1 embedding
-# =========================
-
+# Test 1
 start = time.time()
 
-doc = chunk_col.find_one(
+count = chunk_col.count_documents({
+    "embedding": {"$exists": True}
+})
+
+print(f"Count: {count}")
+print(f"Count time: {time.time() - start:.3f}s")
+
+
+# Test 2
+start = time.time()
+
+cursor = chunk_col.find(
     {"embedding": {"$exists": True}},
-    {"embedding": 1}
+    {
+        "embedding": 1
+    }
 )
 
-print(f"1 document: {time.time() - start:.3f}s")
+docs = list(cursor)
+
+print(f"Loaded: {len(docs)}")
+print(f"Embedding only: {time.time() - start:.3f}s")
 
 
-# =========================
-# TEST 2: 10 embeddings
-# =========================
-
+# Test 3
 start = time.time()
 
-docs = list(
-    chunk_col.find(
-        {"embedding": {"$exists": True}},
-        {"embedding": 1}
-    ).limit(10)
+cursor = chunk_col.find(
+    {"embedding": {"$exists": True}},
+    {
+        "embedding": 1,
+        "content": 1,
+        "doc_id": 1,
+        "section_title": 1,
+        "hierarchy": 1
+    }
 )
 
-print(f"10 documents: {time.time() - start:.3f}s")
+docs = list(cursor)
 
-
-# =========================
-# TEST 3: 100 embeddings
-# =========================
-
-start = time.time()
-
-docs = list(
-    chunk_col.find(
-        {"embedding": {"$exists": True}},
-        {"embedding": 1}
-    ).limit(100)
-)
-
-print(f"100 documents: {time.time() - start:.3f}s")
-
-
-# =========================
-# TEST 4: 500 embeddings
-# =========================
-
-start = time.time()
-
-docs = list(
-    chunk_col.find(
-        {"embedding": {"$exists": True}},
-        {"embedding": 1}
-    ).limit(500)
-)
-
-print(f"500 documents: {time.time() - start:.3f}s")
+print(f"Loaded: {len(docs)}")
+print(f"All fields: {time.time() - start:.3f}s")
