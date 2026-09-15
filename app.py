@@ -1,36 +1,182 @@
 # app.py
 # Flask app chính, xử lý API chat và giao diện web
-from flask import Flask, render_template, request, jsonify
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, redirect, session, url_for
 from datetime import datetime
 import os
+import uuid
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from src.processing.searching import semantic_search
 from src.ai.chat import ask_llm
 from src.storage.mongo import get_db
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-secret-key")
+
+
+def current_user():
+    return session.get("user")
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user():
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Authentication required"}), 401
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def admin_required(view):
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if current_user().get("role") != "admin":
+            return jsonify({"error": "Admin access required"}), 403
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def configured_users():
+    return {
+        os.environ.get("APP_USER_USERNAME", "user"): {
+            "password": os.environ.get("APP_USER_PASSWORD", "user"),
+            "role": "user"
+        },
+        os.environ.get("APP_ADMIN_USERNAME", "admin"): {
+            "password": os.environ.get("APP_ADMIN_PASSWORD", "admin"),
+            "role": "admin"
+        }
+    }
+
+
+def find_registered_user(username):
+    try:
+        return get_db()["users"].find_one({"username": username})
+    except Exception as error:
+        print(f"[WARN] Could not read users: {error}")
+        return None
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or request.form
+        username = data.get("username", "").strip()
+        password = data.get("password", "")
+        account = configured_users().get(username)
+        registered_account = None if account else find_registered_user(username)
+        valid_password = (
+            account and account["password"] == password
+        ) or (
+            registered_account and check_password_hash(
+                registered_account["password_hash"], password
+            )
+        )
+        if not valid_password:
+            return jsonify({"error": "Tên đăng nhập hoặc mật khẩu không đúng"}), 401
+        role = account["role"] if account else registered_account.get("role", "user")
+        session["user"] = {"username": username, "role": role}
+        session.setdefault("conversation_id", str(uuid.uuid4()))
+        return jsonify({"user": session["user"]})
+    if current_user():
+        return redirect(url_for("home"))
+    return render_template("login.html")
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or request.form
+        username = data.get("username", "").strip()
+        password = data.get("password", "")
+        confirm_password = data.get("confirm_password", "")
+
+        if len(username) < 3:
+            return jsonify({"error": "Tên đăng nhập phải có ít nhất 3 ký tự"}), 400
+        if len(password) < 6:
+            return jsonify({"error": "Mật khẩu phải có ít nhất 6 ký tự"}), 400
+        if password != confirm_password:
+            return jsonify({"error": "Mật khẩu xác nhận không khớp"}), 400
+        if username in configured_users() or find_registered_user(username):
+            return jsonify({"error": "Tên đăng nhập đã tồn tại"}), 409
+
+        try:
+            get_db()["users"].insert_one({
+                "username": username,
+                "password_hash": generate_password_hash(password),
+                "role": "user",
+                "created_at": datetime.now().isoformat()
+            })
+        except Exception as error:
+            print(f"[ERROR /register]: {error}")
+            return jsonify({"error": "Không thể tạo tài khoản lúc này"}), 500
+
+        return jsonify({"success": True, "message": "Đăng ký thành công"}), 201
+
+    if current_user():
+        return redirect(url_for("home"))
+    return render_template("login.html", register_mode=True)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"success": True})
+
+
+@app.route("/api/me")
+def me():
+    user = current_user()
+    if not user:
+        return jsonify({"user": None}), 401
+    return jsonify({"user": user})
+
+
+def ensure_conversation():
+    if "conversation_id" not in session:
+        session["conversation_id"] = str(uuid.uuid4())
+    return session["conversation_id"]
+
+
+def save_chat_result(question, result):
+    result["question"] = question
+    result["conversation_id"] = ensure_conversation()
+    result["user_id"] = current_user()["username"]
+    try:
+        get_db()["chat_history"].insert_one(dict(result))
+    except Exception as error:
+        print(f"[WARN] Could not save chat history: {error}")
 
 
 @app.route("/")
 @app.route("/chat")
+@login_required
 def home():
     return render_template("chat.html", page="chat")
 
 @app.route("/documents")
+@login_required
 def personal_documents():
     return render_template("chat.html", page="documents")
 
 
 @app.route("/admin")
+@admin_required
 def admin_page():
     return render_template("chat.html", page="admin")
 
 
 @app.route("/api/chat", methods=["POST"])
+@login_required
 def chat():
     try:
-        question = request.json.get("question", "").strip()
-        top_k = request.json.get("top_k", 5)
+        data = request.get_json(silent=True) or {}
+        question = data.get("question", "").strip()
+        top_k = data.get("top_k", 5)
 
         if not question:
             return jsonify({"error": "Question cannot be empty"}), 400
@@ -40,12 +186,14 @@ def chat():
         results = semantic_search(question, top_k=top_k)
 
         if not results:
-            return jsonify({
+            result = {
                 "response": "Không tìm thấy thông tin liên quan trong cơ sở tài liệu phù hợp",
                 "citations": [],
                 "num_retrieved": 0,
                 "timestamp": datetime.now().isoformat()
-            })
+            }
+            save_chat_result(question, result)
+            return jsonify(result)
 
         top1 = float(results[0][0])
         top5 = float(results[min(4, len(results) - 1)][0])
@@ -68,12 +216,14 @@ def chat():
                 "[RETRIEVAL] Confidence thấp -> không gọi LLM"
             )
 
-            return jsonify({
+            result = {
                 "response": "Tôi không tìm thấy thông tin phù hợp trong cơ sở dữ liệu.",
                 "citations": [],
                 "num_retrieved": len(results),
                 "timestamp": datetime.now().isoformat()
-            })
+            }
+            save_chat_result(question, result)
+            return jsonify(result)
 
         context_list = []
         for score, doc in results:
@@ -96,16 +246,74 @@ def chat():
         print(f"[API] Created {len(citations)} citations")
         print(f"[API] Answer length: {len(answer)} chars")
 
-        return jsonify({
+        result = {
             "response": answer,
             "citations": citations,
             "num_retrieved": len(results),
             "timestamp": datetime.now().isoformat()
-        })
+        }
+        save_chat_result(question, result)
+        return jsonify(result)
 
     except Exception as e:
         print(f"[ERROR] {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/history", methods=["GET"])
+@login_required
+def chat_history():
+    conversation_id = request.args.get("conversation_id") or ensure_conversation()
+    try:
+        documents = get_db()["chat_history"].find(
+            {
+                "user_id": current_user()["username"],
+                "conversation_id": conversation_id
+            },
+            {"_id": 0}
+        ).sort("timestamp", 1)
+        return jsonify({"history": list(documents), "conversation_id": conversation_id})
+    except Exception as error:
+        return jsonify({"history": [], "conversation_id": conversation_id, "error": str(error)})
+
+
+@app.route("/api/conversations", methods=["GET"])
+@login_required
+def conversations():
+    try:
+        rows = get_db()["chat_history"].find(
+            {"user_id": current_user()["username"]},
+            {"_id": 0, "conversation_id": 1, "question": 1, "timestamp": 1}
+        ).sort("timestamp", -1)
+        result = []
+        seen = set()
+        for row in rows:
+            conversation_id = row.get("conversation_id")
+            if conversation_id and conversation_id not in seen:
+                seen.add(conversation_id)
+                result.append(row)
+        return jsonify({"conversations": result})
+    except Exception as error:
+        return jsonify({"conversations": [], "error": str(error)})
+
+
+@app.route("/api/conversations/new", methods=["POST"])
+@login_required
+def new_conversation():
+    session["conversation_id"] = str(uuid.uuid4())
+    return jsonify({"conversation_id": session["conversation_id"], "history": []})
+
+
+@app.route("/api/export", methods=["POST"])
+@login_required
+def export_history():
+    response = chat_history().json
+    return jsonify({
+        "conversation_id": response["conversation_id"],
+        "export_time": datetime.now().isoformat(),
+        "num_chats": len(response["history"]),
+        "chats": response["history"]
+    })
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -113,21 +321,25 @@ def chat():
 # ═════════════════════════════════════════════════════════════════════════════
 
 @app.route("/admin/documents")
+@admin_required
 def admin_documents():
     return render_template("admin_documents.html")
 
 
 @app.route("/admin/dashboard")
+@admin_required
 def admin_dashboard():
     return render_template("admin_dashboard.html")
 
 
 @app.route("/admin/settings")
+@admin_required
 def admin_settings():
     return render_template("admin_settings.html")
 
 
 @app.route("/api/admin/stats", methods=["GET"])
+@admin_required
 def get_stats():
     """Lấy thống kê thực tế từ CSDL MongoDB"""
     try:
@@ -155,6 +367,7 @@ def get_stats():
 
 
 @app.route("/api/admin/documents", methods=["GET"])
+@admin_required
 def get_documents():
     try:
         db = get_db()
@@ -276,6 +489,7 @@ def get_documents():
             "documents": []
         }), 500
 @app.route("/api/admin/documents/<doc_id>/status", methods=["PATCH"])
+@admin_required
 def update_document_status(doc_id):
     try:
         data = request.get_json() or {}
@@ -313,6 +527,7 @@ def update_document_status(doc_id):
         print(f"[ERROR /api/admin/documents/status]: {str(e)}")
         return jsonify({"error": str(e)}), 500
 @app.route("/api/admin/documents/<doc_id>", methods=["DELETE"])
+@admin_required
 def delete_document(doc_id):
     try:
         db = get_db()
@@ -336,6 +551,7 @@ def delete_document(doc_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/admin/upload", methods=["POST"])
+@admin_required
 def upload_document():
     """Xử lý upload tài liệu và lưu metadata vào MongoDB"""
     try:
@@ -374,6 +590,7 @@ def upload_document():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/admin/dashboard", methods=["GET"])
+@admin_required
 def admin_dashboard_api():
     try:
         db = get_db()

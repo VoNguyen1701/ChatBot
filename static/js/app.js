@@ -55,7 +55,7 @@ function setupEventListeners() {
         }
     });
 
-    document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
+    document.getElementById('newConversationBtn').addEventListener('click', newConversation);
     document.getElementById('exportBtn').addEventListener('click', exportChat);
     document.getElementById('closeCitationsBtn').addEventListener('click', () => {
         document.getElementById('citationsPanel').style.display = 'none';
@@ -161,6 +161,42 @@ async function loadChatHistory() {
     }
 }
 
+async function loadConversationList() {
+    try {
+        const response = await fetch('/api/conversations');
+        if (!response.ok) return;
+        const data = await response.json();
+        const list = document.getElementById('chatHistoryGroups');
+        list.innerHTML = '';
+        (data.conversations || []).forEach((conversation) => {
+            const button = document.createElement('button');
+            button.className = 'history-item';
+            button.textContent = conversation.question || 'Cuộc trò chuyện';
+            button.title = button.textContent;
+            button.addEventListener('click', () => loadConversation(conversation.conversation_id));
+            list.appendChild(button);
+        });
+    } catch (error) {
+        console.error('Error loading conversations:', error);
+    }
+}
+
+async function loadConversation(conversationId) {
+    const response = await fetch(`/api/history?conversation_id=${encodeURIComponent(conversationId)}`);
+    const data = await response.json();
+    if (!response.ok) {
+        showToast(data.error || 'Không thể tải cuộc trò chuyện', 'error');
+        return;
+    }
+    state.chatHistory = data.history || [];
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.innerHTML = '';
+    state.chatHistory.forEach((entry) => {
+        addMessageToChat(entry.question, 'user', entry.timestamp);
+        addMessageToChat(entry.response, 'assistant', entry.timestamp);
+    });
+}
+
 async function sendMessage() {
     const questionInput = document.getElementById('questionInput');
     const question = questionInput.value.trim();
@@ -262,17 +298,17 @@ function addMessageToChat(message, role, timestamp = null) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-async function clearHistory() {
-    const confirmed = window.confirm('Bạn chắc chắn muốn xóa lịch sử chat hiện tại?');
-    if (!confirmed) return;
-
+async function newConversation() {
     try {
-        const response = await fetch('/api/clear-history', { method: 'POST' });
-        if (!response.ok) throw new Error('Không thể xóa lịch sử');
+        const response = await fetch('/api/conversations/new', { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Không thể tạo cuộc trò chuyện mới');
         state.chatHistory = [];
         renderWelcomeMessage();
         document.getElementById('citationsList').innerHTML = '';
-        showToast('Lịch sử đã được xóa', 'success');
+        document.getElementById('citationsPanel').style.display = 'none';
+        await loadConversationList();
+        showToast('Đã tạo cuộc trò chuyện mới', 'success');
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -678,6 +714,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     await loadModels();
     await loadChatHistory();
+    await loadConversationList();
     await loadPersonalDocs();
     await fetchAdminSummary();
     await loadAdminDashboard();

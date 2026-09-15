@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Đăng ký' if register_mode else 'Đăng nhập' }} Legal AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-page">
+    <main class="login-card">
+        <h1>Legal AI</h1>
+        <p>{{ 'Tạo tài khoản để bắt đầu tra cứu.' if register_mode else 'Đăng nhập để bắt đầu tra cứu.' }}</p>
+        <form id="authForm">
+            <label>Tên đăng nhập<input name="username" required autocomplete="username"></label>
+            <label>Mật khẩu<input name="password" type="password" required autocomplete="current-password"></label>
+            {% if register_mode %}
+            <label>Xác nhận mật khẩu<input name="confirm_password" type="password" required autocomplete="new-password"></label>
+            {% endif %}
+            <button class="btn btn-primary" type="submit">{{ 'Đăng ký' if register_mode else 'Đăng nhập' }}</button>
+            <div id="authError" class="login-error"></div>
+        </form>
+        <p><a href="{{ url_for('login') if register_mode else url_for('register') }}">
+            {{ 'Đã có tài khoản? Đăng nhập' if register_mode else 'Chưa có tài khoản? Đăng ký' }}
+        </a></p>
+    </main>
+    <script>
+        document.getElementById('authForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const response = await fetch('{{ url_for("register") if register_mode else url_for("login") }}', {
+                method: 'POST',
+                body: new FormData(event.target)
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                document.getElementById('authError').textContent = data.error || 'Thao tác thất bại';
+                return;
+            }
+            window.location.href = '{{ "/login" if register_mode else "/chat" }}';
+        });
+    </script>
+</body>
+</html>
