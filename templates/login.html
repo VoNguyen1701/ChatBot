@@ -11,8 +11,8 @@
         <h1>Legal AI</h1>
         <p>{{ 'Tạo tài khoản để bắt đầu tra cứu.' if register_mode else 'Đăng nhập để bắt đầu tra cứu.' }}</p>
         <form id="authForm">
-            <label>Tên đăng nhập<input name="username" required autocomplete="username"></label>
-            <label>Mật khẩu<input name="password" type="password" required autocomplete="current-password"></label>
+            <label>Tên đăng nhập<input name="username" value="Thaonguyen" required autocomplete="username"></label>
+            <label>Mật khẩu<input name="password"  type="password" value="123456" required autocomplete="current-password"></label>
             {% if register_mode %}
             <label>Xác nhận mật khẩu<input name="confirm_password" type="password" required autocomplete="new-password"></label>
             {% endif %}
