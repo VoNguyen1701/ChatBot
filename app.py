@@ -588,7 +588,19 @@ def upload_document():
     except Exception as e:
         print(f"[ERROR /api/admin/upload]: {str(e)}")
         return jsonify({"error": str(e)}), 500
+@app.route("/api/personal-docs/upload", methods=["POST"])
+@login_required
+def upload_personal_document():
+    user = current_user()
 
+    if user.get("role") != "admin":
+        return jsonify({
+            "error": "Bạn chưa có quyền upload dữ liệu này lên"
+        }), 403
+
+    return jsonify({
+        "error": "Chức năng upload chưa được triển khai"
+    }), 400
 @app.route("/api/admin/dashboard", methods=["GET"])
 @admin_required
 def admin_dashboard_api():
